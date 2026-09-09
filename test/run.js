@@ -491,6 +491,38 @@ test('the pause durations all have labels in every language', function () {
   });
 });
 
+// ---------------------------------------------------------------- version
+
+function readJson(relative) {
+  return JSON.parse(fs.readFileSync(path.join(__dirname, '..', relative), 'utf8'));
+}
+
+test('the manifest and package versions agree', function () {
+  // The popup shows the manifest version, so a drifting package.json would
+  // quietly make every release note wrong.
+  eq(readJson('package.json').version, readJson('manifest.json').version);
+});
+
+test('the version is plain semver', function () {
+  const version = readJson('manifest.json').version;
+  // Chrome accepts up to four dot-separated integers and nothing else --
+  // no "-beta", no leading zeroes.
+  ok(/^\d+(\.\d+){0,3}$/.test(version), JSON.stringify(version) + ' is not a version Chrome will load');
+  version.split('.').forEach(function (part) {
+    ok(String(Number(part)) === part, 'version part ' + JSON.stringify(part) + ' has a leading zero');
+    ok(Number(part) <= 65535, 'version parts max out at 65535');
+  });
+});
+
+test('the popup asks the manifest for the version', function () {
+  // A hardcoded copy in the popup would be the thing that goes stale.
+  const src = fs.readFileSync(path.join(__dirname, '../src/popup/popup.js'), 'utf8');
+  ok(src.indexOf('chrome.runtime.getManifest().version') !== -1,
+    'the popup should read the version from the manifest');
+  const html = fs.readFileSync(path.join(__dirname, '../src/popup/popup.html'), 'utf8');
+  ok(html.indexOf('id="version"') !== -1, 'the popup needs somewhere to put it');
+});
+
 // ---------------------------------------------------------------- report
 
 console.log('');

@@ -24,8 +24,8 @@ to anything.
 It activates on Gmail, Outlook (web), Yahoo Mail, Proton Mail, Fastmail and
 Zoho Mail. The toolbar badge shows how many phrases were swapped on the page;
 the popup has the language picker, the on/off switch, the pause, the typo
-tolerance, and the list of what it caught. The popup speaks whichever language
-you are translating into.
+tolerance, the list of what it caught, and the version it is running. The popup
+speaks whichever language you are translating into.
 
 **Click any rewritten phrase to see what was really written**, and click again
 to put the slang back. Flipped phrases go grey so you can tell at a glance which

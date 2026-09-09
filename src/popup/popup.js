@@ -86,7 +86,8 @@ const els = {
   dict: document.getElementById('dict-line'),
   pauseRow: document.getElementById('pause-row'),
   pauseHint: document.getElementById('pause-hint'),
-  pauseActions: document.getElementById('pause-actions')
+  pauseActions: document.getElementById('pause-actions'),
+  version: document.getElementById('version')
 };
 
 let current = Object.assign({}, DEFAULTS);
@@ -181,6 +182,22 @@ els.strictness.addEventListener('change', function () {
 els.highlight.addEventListener('change', function () {
   chrome.storage.sync.set({ highlight: els.highlight.checked });
 });
+
+/**
+ * The manifest is the only place a version number lives, so the popup asks
+ * it rather than carrying a copy that could drift.
+ */
+function showVersion() {
+  let version = '';
+  try {
+    version = chrome.runtime.getManifest().version;
+  } catch (err) {
+    // No extension context (opened as a plain page); just leave it blank.
+  }
+  els.version.textContent = version ? 'v' + version : '';
+}
+
+showVersion();
 
 function strings() {
   return STRINGS[current.language] || STRINGS[SlangPacks.DEFAULT_ID];
