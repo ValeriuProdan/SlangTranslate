@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ro">
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header class="head">
+    <div class="flag" aria-hidden="true"><i></i><i></i><i></i></div>
+    <div>
+      <h1>Slang Translate</h1>
+      <p class="sub" id="dict-line">romana &middot; limbaj de cartier</p>
+    </div>
+  </header>
+
+  <label class="row switch-row">
+    <span>
+      <strong>Traducerea e pornita</strong>
+      <em id="state-hint">mailurile sunt rescrise</em>
+    </span>
+    <input type="checkbox" id="enabled" class="switch">
+  </label>
+
+  <div class="row">
+    <span><strong>Cat de tolerant la typo-uri</strong>
+      <em>cauta si variante scrise gresit</em></span>
+    <select id="strictness">
+      <option value="strict">strict</option>
+      <option value="normal">normal</option>
+      <option value="loose">lejer</option>
+    </select>
+  </div>
+
+  <label class="row switch-row">
+    <span><strong>Arata originalul</strong>
+      <em>subliniat, cu tooltip la hover</em></span>
+    <input type="checkbox" id="showOriginal" class="switch">
+  </label>
+
+  <section class="stats">
+    <div class="count"><b id="count">0</b><span>traduceri pe pagina asta</span></div>
+    <ul id="top" class="top"></ul>
+    <p class="empty" id="empty">Deschide un mail corporatist si revino.</p>
+  </section>
+
+  <footer>
+    <span>Totul se intampla local. Nimic nu pleaca nicaieri.</span>
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>

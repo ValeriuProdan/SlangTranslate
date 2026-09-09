@@ -1,0 +1,12 @@
+{
+  "name": "slang-translate",
+  "version": "0.1.0",
+  "description": "Chrome extension that rewrites corporate speak in your inbox as Romanian slang.",
+  "private": true,
+  "scripts": {
+    "test": "node test/run.js",
+    "icons": "node tools/make-icons.js",
+    "zip": "rm -f slang-translate.zip && zip -r slang-translate.zip manifest.json src icons -x '*.DS_Store'"
+  },
+  "license": "MIT"
+}

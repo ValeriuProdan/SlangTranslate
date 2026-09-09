@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Slang Translate - demo</title>
+<style>
+  :root { color-scheme: light; }
+  body {
+    margin: 0; padding: 28px;
+    background: #f2f3f6;
+    font: 14px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: #1d2026;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; }
+  .bar {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+  .brand { display: flex; align-items: center; gap: 9px; margin-right: auto; font-weight: 650; }
+  .flag { display: flex; width: 24px; height: 24px; border-radius: 6px; overflow: hidden; }
+  .flag i { flex: 1; }
+  .flag i:nth-child(1) { background: #002b7f; }
+  .flag i:nth-child(2) { background: #fcd116; }
+  .flag i:nth-child(3) { background: #ce1126; }
+  button, select {
+    font: inherit; padding: 6px 12px; border-radius: 8px;
+    border: 1px solid #ccd0da; background: #fff; cursor: pointer;
+  }
+  button.primary { background: #ce1126; border-color: #ce1126; color: #fff; font-weight: 600; }
+  .mail { background: #fff; border-radius: 12px; padding: 24px 26px; box-shadow: 0 1px 3px rgba(20,22,28,.12); }
+  .subject { margin: 0 0 4px; font-size: 19px; }
+  .meta { color: #6b7280; font-size: 12.5px; margin-bottom: 18px; }
+  .compose {
+    margin-top: 18px; background: #fff; border-radius: 12px; padding: 16px 18px;
+    box-shadow: 0 1px 3px rgba(20,22,28,.12);
+  }
+  .compose h3 { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: #6b7280; }
+  .compose [contenteditable] {
+    border: 1px dashed #ccd0da; border-radius: 8px; padding: 10px; min-height: 46px; outline: none;
+  }
+  .note { color: #6b7280; font-size: 12px; margin-top: 8px; }
+  .count { font-variant-numeric: tabular-nums; font-weight: 600; }
+
+  /* The extension's real stylesheet, inlined so the demo needs no build. */
+  html.slang-marks .slang-swap {
+    border-bottom: 1px dashed rgba(206, 17, 38, 0.55);
+    background-image: linear-gradient(rgba(252, 209, 22, 0.22), rgba(252, 209, 22, 0.22));
+    border-radius: 2px; cursor: help;
+  }
+  html.slang-marks .slang-swap:hover {
+    background-image: linear-gradient(rgba(252, 209, 22, 0.45), rgba(252, 209, 22, 0.45));
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bar">
+    <div class="brand"><span class="flag"><i></i><i></i><i></i></span> Slang Translate</div>
+    <select id="strictness">
+      <option value="strict">strict</option>
+      <option value="normal" selected>normal</option>
+      <option value="loose">lejer</option>
+    </select>
+    <button id="toggle" class="primary">Tradu</button>
+    <span class="count" id="count">0 traduceri</span>
+  </div>
+
+  <div class="mail" id="mail">
+    <h2 class="subject">Q3 alignment &amp; next steps</h2>
+    <div class="meta">Bogdan P. &lt;bogdan@example.com&gt; &middot; to me &middot; 09:41</div>
+    <p>Hi team,</p>
+    <p>I hope this email finds you well. FYI, as per my last email, we still need to align on the
+       deliverables before EOD. Just checking in on the action items from our sync last week.</p>
+    <p>I will follow up with leadership and circle back once we have buy in. Unfortunately I do not
+       have the bandwidth this sprint, so let us park this and revisit later — happy to take this
+       offline if that is easier.</p>
+    <p>This is table stakes for the roadmap, and it will really move the needle. Low hanging fruit,
+       honestly. Please advise at your earliest convenience.</p>
+    <p>Thanks in advance!</p>
+    <p>Best regards,<br>Bogdan</p>
+  </div>
+
+  <div class="compose">
+    <h3>Compose (must stay untouched)</h3>
+    <div contenteditable="true">FYI I will follow up — this box is contenteditable, so the extension
+      must leave every word of it alone.</div>
+    <p class="note">Typos are handled too: try "as per my lst emial" or "no bandwith".</p>
+  </div>
+</div>
+
+<script src="../src/lib/normalize.js"></script>
+<script src="../src/lib/fuzzy.js"></script>
+<script src="../src/lib/pattern.js"></script>
+<script src="../src/lib/matcher.js"></script>
+<script src="../src/lib/dom-rewrite.js"></script>
+<script src="../src/data/dictionary-ro.js"></script>
+<script>
+  // Same modules the extension loads; only the chrome.* glue is missing.
+  const matcher = SlangMatcher.createMatcher(SlangDictionaryRO);
+  const mail = document.getElementById('mail');
+  const countEl = document.getElementById('count');
+  const toggle = document.getElementById('toggle');
+  const strictness = document.getElementById('strictness');
+  let rewriter = null;
+  let on = false;
+
+  function apply() {
+    rewriter = SlangDomRewrite.createRewriter({
+      document: document,
+      matcher: matcher,
+      strictness: strictness.value,
+      showOriginal: true
+    });
+    document.documentElement.classList.add('slang-marks');
+    rewriter.rewrite(mail);
+    countEl.textContent = rewriter.stats.count + ' traduceri';
+    toggle.textContent = 'Inapoi la engleza';
+    on = true;
+  }
+
+  function undo() {
+    if (rewriter) rewriter.undoAll();
+    countEl.textContent = '0 traduceri';
+    toggle.textContent = 'Tradu';
+    on = false;
+  }
+
+  toggle.addEventListener('click', function () { on ? undo() : apply(); });
+  strictness.addEventListener('change', function () { if (on) { undo(); apply(); } });
+
+  if (location.search.indexOf('auto') !== -1) apply();
+</script>
+</body>
+</html>
