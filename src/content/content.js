@@ -10,7 +10,7 @@
 
   const DEFAULTS = {
     enabled: true,
-    language: window.SlangPacks.DEFAULT_ID,
+    language: window.SlangPacks.AUTO,
     strictness: 'normal',
     highlight: true
   };
@@ -26,10 +26,14 @@
   let scheduled = false;
   const pending = [];
 
-  /** Built lazily, and rebuilt whenever the language changes. */
+  /**
+    * Built once and never rebuilt: every pack shares the same patterns, so the
+    * language only changes which words come out, never what gets matched.
+    */
   function ensureMatcher() {
     if (!matcher) {
-      matcher = window.SlangMatcher.createMatcher(window.SlangPacks.build(config.language));
+      matcher = window.SlangMatcher.createMatcher(
+        window.SlangPacks.build(window.SlangPacks.DEFAULT_ID));
     }
     return matcher;
   }
@@ -39,7 +43,11 @@
       rewriter = window.SlangDomRewrite.createRewriter({
         document: document,
         matcher: ensureMatcher(),
-        strictness: config.strictness
+        strictness: config.strictness,
+        language: config.language,
+        fallback: window.SlangPacks.DEFAULT_ID,
+        packs: window.SlangPacks,
+        detect: window.SlangDetect
       });
     }
     return rewriter;
@@ -203,11 +211,6 @@
       if (!(key in DEFAULTS)) return;
       config[key] = changes[key].newValue;
       touched = true;
-      // A different language means a different dictionary entirely.
-      if (key === 'language') {
-        matcher = null;
-        rewriter = null;
-      }
     });
     if (touched) refresh();
   });
@@ -219,6 +222,7 @@
       ok: true,
       count: current.stats.count,
       top: current.topEntries(6),
+      byLanguage: current.stats.byLanguage,
       paused: isPaused(),
       pausedUntil: pausedUntil,
       language: config.language,

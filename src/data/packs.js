@@ -9,10 +9,24 @@
   'use strict';
 
   const req = typeof require === 'function' ? require : null;
-  const PHRASES = root.SlangPhrases || (req ? req('./phrases.js') : null);
+  // Two source lists: English corporate speak, which turns up in everyone's
+  // email, and Romanian corporate speak, which does not.
+  const EN_PHRASES = root.SlangPhrases || (req ? req('./phrases.js') : null);
+  const RO_PHRASES = root.SlangPhrasesRO || (req ? req('./phrases-ro.js') : null);
+
+  const PHRASES = { entries: [] };
+  [EN_PHRASES, RO_PHRASES].forEach(function (list) {
+    if (!list) return;
+    list.entries.forEach(function (entry) {
+      PHRASES.entries.push({ id: entry.id, p: entry.p, src: list.src || 'en' });
+    });
+  });
 
   const registry = new Map();
   const DEFAULT_ID = 'ro';
+
+  // Not a pack: the instruction to work the language out from the text.
+  const AUTO = 'auto';
 
   function register(pack) {
     if (pack && pack.id) registry.set(pack.id, pack);
@@ -52,7 +66,7 @@
     PHRASES.entries.forEach(function (phrase) {
       const out = pack.out[phrase.id];
       if (!out || !out.length) return;
-      entries.push({ id: phrase.id, p: phrase.p, out: out });
+      entries.push({ id: phrase.id, p: phrase.p, src: phrase.src, out: out });
     });
     return {
       id: pack.id,
@@ -62,8 +76,27 @@
     };
   }
 
+  /**
+   * The replacement one language would use for one phrase, chosen the same
+   * deterministic way build() would have chosen it. This is what lets the
+   * language be decided per sentence instead of per page.
+   */
+  function replacementFor(packId, entryId, original) {
+    // Resolved on use, not on load: the popup loads the packs without the
+    // matcher and never asks for a replacement.
+    const M = root.SlangMatcher || (req ? req('../lib/matcher.js') : null);
+    if (!M) return '';
+    const pack = get(packId);
+    const outputs = pack.out[entryId];
+    if (!outputs || !outputs.length) return '';
+    return M.pickVariant(outputs, entryId + '|' + String(original).toLowerCase());
+  }
+
   const api = {
+    phrases: PHRASES,
     build: build,
+    replacementFor: replacementFor,
+    AUTO: AUTO,
     get: get,
     list: list,
     register: register,

@@ -26,6 +26,36 @@
     return PRESETS[strictness] || PRESETS.normal;
   }
 
+  /**
+   * Pick one of several variants deterministically, so re-rendering the same
+   * email never reshuffles the joke.
+   */
+  function pickVariant(outputs, seed) {
+    if (!outputs || !outputs.length) return '';
+    if (outputs.length === 1) return outputs[0];
+    return outputs[fnv1a(seed) % outputs.length];
+  }
+
+  /**
+   * Recompute the replacements of matches already found, which is how the
+   * language can be decided after the phrases are located rather than before.
+   * Casing stays here so there is one place that knows about it.
+   *
+   * @param {function(string, string): string} replace entry id + original text
+   */
+  function relabel(text, matches, replace) {
+    const kept = [];
+    matches.forEach(function (match) {
+      const raw = replace(match.entry.id, match.original);
+      // A pack with no words for this phrase leaves the text alone rather
+      // than falling back to another language's joke.
+      if (!raw) return;
+      match.replacement = N.applyCase(match.original, raw, N.isSentenceStart(text, match.start));
+      kept.push(match);
+    });
+    return kept;
+  }
+
   function fnv1a(str) {
     let h = 0x811c9dc5;
     for (let i = 0; i < str.length; i++) {
@@ -168,14 +198,8 @@
       return matches;
     }
 
-    /**
-     * Pick one of the entry's variants deterministically, so re-rendering the
-     * same email never reshuffles the joke.
-     */
     function pickOutput(entry, original) {
-      const outputs = entry.out;
-      if (outputs.length === 1) return outputs[0];
-      return outputs[fnv1a(entry.id + '|' + N.normalizeWord(original)) % outputs.length];
+      return pickVariant(entry.out, entry.id + '|' + N.normalizeWord(original));
     }
 
     /** Convenience for tests and for the popup preview. */
@@ -199,7 +223,13 @@
     };
   }
 
-  const api = { createMatcher: createMatcher, PRESETS: PRESETS, configFor: configFor };
+  const api = {
+    createMatcher: createMatcher,
+    pickVariant: pickVariant,
+    relabel: relabel,
+    PRESETS: PRESETS,
+    configFor: configFor
+  };
 
   root.SlangMatcher = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

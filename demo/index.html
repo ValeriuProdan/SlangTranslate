@@ -86,6 +86,15 @@
        honestly. Please advise at your earliest convenience.</p>
     <p>Thanks in advance!</p>
     <p>Best regards,<br>Bogdan</p>
+
+    <hr style="border:0;border-top:1px solid #e6e8ee;margin:20px 0">
+
+    <p style="color:#6b7280;font-size:12.5px;margin-top:0">Andrei P. wrote:</p>
+    <p>Salut, am facut deploy la feature-ul ala dar mai avem un blocker. Hai sa
+       dam un sync maine ca avem deadline la task-uri. FYI, nu am bandwidth
+       saptamana asta, sunt OOO de joi.</p>
+    <p>Ramanem la dispozitia dumneavoastra pentru orice detalii. Va multumesc
+       anticipat si va tin la curent. Cu stima.</p>
   </div>
 
   <div class="compose">
@@ -100,8 +109,10 @@
 <script src="../src/lib/fuzzy.js"></script>
 <script src="../src/lib/pattern.js"></script>
 <script src="../src/lib/matcher.js"></script>
+<script src="../src/lib/detect.js"></script>
 <script src="../src/lib/dom-rewrite.js"></script>
 <script src="../src/data/phrases.js"></script>
+<script src="../src/data/phrases-ro.js"></script>
 <script src="../src/data/slang-ro.js"></script>
 <script src="../src/data/slang-en.js"></script>
 <script src="../src/data/packs.js"></script>
@@ -118,9 +129,15 @@
   // The demo chrome speaks whichever language it is translating into.
   const LABELS = {
     ro: { translate: 'Tradu', revert: 'Inapoi la engleza', count: ' traduceri' },
-    en: { translate: 'Translate', revert: 'Back to corporate', count: ' swaps' }
+    en: { translate: 'Translate', revert: 'Back to corporate', count: ' swaps' },
+    auto: { translate: 'Translate', revert: 'Back to corporate', count: ' swaps' }
   };
   const labels = function () { return LABELS[language.value] || LABELS.ro; };
+
+  const autoOption = document.createElement('option');
+  autoOption.value = SlangPacks.AUTO;
+  autoOption.textContent = 'Auto';
+  language.append(autoOption);
 
   SlangPacks.list().forEach(function (pack) {
     const option = document.createElement('option');
@@ -130,15 +147,22 @@
   });
 
   function apply() {
-    const matcher = SlangMatcher.createMatcher(SlangPacks.build(language.value));
+    const matcher = SlangMatcher.createMatcher(SlangPacks.build(SlangPacks.DEFAULT_ID));
     rewriter = SlangDomRewrite.createRewriter({
       document: document,
       matcher: matcher,
-      strictness: strictness.value
+      strictness: strictness.value,
+      language: language.value,
+      fallback: SlangPacks.DEFAULT_ID,
+      packs: SlangPacks,
+      detect: SlangDetect
     });
     document.documentElement.classList.add('slang-marks');
     rewriter.rewrite(mail);
-    countEl.textContent = rewriter.stats.count + labels().count;
+    const by = rewriter.stats.byLanguage;
+    const breakdown = Object.keys(by).map(function (id) { return by[id] + ' ' + id; }).join(' · ');
+    countEl.textContent = rewriter.stats.count + labels().count +
+      (language.value === SlangPacks.AUTO && breakdown ? ' (' + breakdown + ')' : '');
     toggle.textContent = labels().revert;
     on = true;
   }

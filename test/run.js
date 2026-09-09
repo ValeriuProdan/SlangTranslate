@@ -10,7 +10,8 @@ const M = require('../src/lib/matcher.js');
 const PAUSE = require('../src/lib/pause.js');
 const fs = require('fs');
 const path = require('path');
-const PHRASES = require('../src/data/phrases.js');
+const PHRASES = require('../src/data/packs.js').phrases;
+const DETECT = require('../src/lib/detect.js');
 const PACKS = require('../src/data/packs.js');
 
 const DICT = PACKS.build('ro');
@@ -290,17 +291,38 @@ test('every pattern actually fires on its own words', function () {
 
 // ---------------------------------------------------------------- packs
 
-test('every language pack covers every phrase', function () {
+function uncovered(packId, phrases) {
+  const out = PACKS.get(packId).out;
+  return phrases
+    .filter(function (entry) { return !out[entry.id] || !out[entry.id].length; })
+    .map(function (entry) { return entry.id; });
+}
+
+test('every pack covers all the English-source phrases', function () {
+  // English corporate speak turns up in everyone's inbox, so every language
+  // needs an answer for it.
+  const english = PHRASES.entries.filter(function (e) { return e.src === 'en'; });
+  ok(english.length > 100, 'expected the English phrase list to be the bulk of it');
   PACKS.list().forEach(function (pack) {
-    const full = PACKS.get(pack.id);
-    const missing = PHRASES.entries
-      .filter(function (entry) {
-        const out = full.out[entry.id];
-        return !out || !out.length;
-      })
-      .map(function (entry) { return entry.id; });
+    const missing = uncovered(pack.id, english);
     ok(missing.length === 0, pack.id + ' is missing: ' + missing.join(', '));
   });
+});
+
+test('a pack covers the corporate speak of its own language', function () {
+  PACKS.list().forEach(function (pack) {
+    const own = PHRASES.entries.filter(function (e) { return e.src === pack.id; });
+    const missing = uncovered(pack.id, own);
+    ok(missing.length === 0, pack.id + ' cannot say its own: ' + missing.join(', '));
+  });
+});
+
+test('a pack is not expected to know another language\'s corporate speak', function () {
+  // English has no reason to carry "raman la dispozitia dumneavoastra", and
+  // relabel() drops what a pack cannot say rather than borrowing.
+  const romanian = PHRASES.entries.filter(function (e) { return e.src === 'ro'; });
+  ok(romanian.length > 0, 'expected some Romanian-source phrases');
+  eq(uncovered('en', romanian).length, romanian.length, 'English should cover none of them');
 });
 
 test('no pack invents ids the phrase list does not have', function () {
@@ -327,7 +349,7 @@ test('both languages build and match', function () {
   ['ro', 'en'].forEach(function (id) {
     const built = PACKS.build(id);
     const m = M.createMatcher(built);
-    eq(built.entries.length, PHRASES.entries.length, id + ' entry count');
+    ok(built.entries.length > 100, id + ' should build a real dictionary');
     ok(m.findMatches('FYI I will follow up before EOD').length >= 2, id + ' should match a corporate sentence');
   });
 });
@@ -521,6 +543,82 @@ test('the popup asks the manifest for the version', function () {
     'the popup should read the version from the manifest');
   const html = fs.readFileSync(path.join(__dirname, '../src/popup/popup.html'), 'utf8');
   ok(html.indexOf('id="version"') !== -1, 'the popup needs somewhere to put it');
+});
+
+// ---------------------------------------------------------------- language
+
+test('plain English is detected as English', function () {
+  [
+    'Hi team, just checking in on the action items from our sync.',
+    'I do not have the bandwidth this sprint, so let us park this.'
+  ].forEach(function (text) {
+    const guess = DETECT.detect(text);
+    ok(guess && guess.id === 'en', JSON.stringify(text) + ' -> ' + (guess ? guess.id : 'null'));
+  });
+});
+
+test('plain Romanian is detected as Romanian, diacritics or not', function () {
+  [
+    'Bună, îți trimit raportul mai târziu astăzi.',
+    'Buna, iti trimit raportul mai tarziu astazi.'
+  ].forEach(function (text) {
+    const guess = DETECT.detect(text);
+    ok(guess && guess.id === 'ro', JSON.stringify(text) + ' -> ' + (guess ? guess.id : 'null'));
+  });
+});
+
+test('romgleza is Romanian, not English', function () {
+  // The borrowed words are nouns; the grammar holding them together is not.
+  [
+    'Am facut deploy la feature-ul ala, dar mai avem un blocker.',
+    'Bag un follow up maine daca nu raspunde nimeni.',
+    'Hai sa dam un sync, ca avem deadline la task-urile astea.'
+  ].forEach(function (text) {
+    const guess = DETECT.detect(text);
+    ok(guess && guess.id === 'ro', JSON.stringify(text) + ' -> ' + (guess ? guess.id : 'null'));
+  });
+});
+
+test('the corporate phrase itself does not get a vote', function () {
+  // "at the end of the day" is five English function words; left in, it
+  // drowns out the short Romanian sentence carrying it.
+  const text = 'Hai sa dam un sync maine, at the end of the day tot noi facem treaba.';
+  const matcher = M.createMatcher(PACKS.build('ro'));
+  const ranges = matcher.findMatches(text).map(function (m) { return [m.start, m.end]; });
+  ok(ranges.length, 'expected the phrase to match');
+  const guess = DETECT.detect(text, ranges);
+  ok(guess && guess.id === 'ro', 'excluding the phrase should leave Romanian');
+});
+
+test('too little text is an honest shrug, not a guess', function () {
+  eq(DETECT.detect('FYI'), null);
+  eq(DETECT.detect('ok'), null);
+  eq(DETECT.detect(''), null);
+});
+
+test('Romanian corporate speak is matched and translated', function () {
+  const ro = M.createMatcher(PACKS.build('ro'));
+  const out = ro.translate('Ramanem la dispozitia dumneavoastra, cu stima.');
+  ok(out.indexOf('dispozitia') === -1, 'the formula should be gone: ' + out);
+  ok(out.indexOf('stima') === -1, 'the sign-off too: ' + out);
+});
+
+test('Romanian corporate speak is dropped, not mistranslated, in English', function () {
+  const text = 'Ramanem la dispozitia dumneavoastra.';
+  const matcher = M.createMatcher(PACKS.build('ro'));
+  const matches = matcher.findMatches(text);
+  ok(matches.length, 'the Romanian matcher should find it');
+  const kept = M.relabel(text, matches, function (id, original) {
+    return PACKS.replacementFor('en', id, original);
+  });
+  eq(kept.length, 0, 'English has no words for it, so nothing is rewritten');
+});
+
+test('an English-source phrase still works in both packs', function () {
+  ['ro', 'en'].forEach(function (id) {
+    const out = M.createMatcher(PACKS.build(id)).translate('FYI');
+    ok(out !== 'FYI', id + ' should have rewritten FYI');
+  });
 });
 
 // ---------------------------------------------------------------- report

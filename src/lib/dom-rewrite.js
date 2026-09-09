@@ -9,6 +9,8 @@
  *  - never touch what the user is typing into (compose boxes, inputs)
  *  - every rewrite is wrapped in a span carrying both texts, so it can be
  *    flipped back and forth on click and undone wholesale
+ *  - the language is decided per passage, not per page, so a Romanian reply
+ *    under an English thread gets Romanian slang
  */
 (function (root) {
   'use strict';
@@ -17,6 +19,13 @@
 
   const CLASS = 'slang-swap';
   const ORIGINAL_CLASS = 'slang-original';
+
+  // How much text the detector wants before it will commit to an answer, and
+  // how far up the tree we will climb looking for it.
+  const CONTEXT_CHARS = 400;
+  const CONTEXT_ENOUGH = 60;
+  const CONTEXT_DEPTH = 6;
+  const PAGE_SAMPLE_CHARS = 2000;
 
   // One delegated listener per document, however many spans there are.
   const listening = new WeakSet();
@@ -94,16 +103,31 @@
     return spans.length;
   }
 
+  function SlangMatcherRef() {
+    return root.SlangMatcher || (typeof require === 'function' ? require('./matcher.js') : null);
+  }
+
   function createRewriter(options) {
     const doc = options.document;
     const matcher = options.matcher;
     const config = {
-      strictness: options.strictness || 'normal'
+      strictness: options.strictness || 'normal',
+      // 'auto', or a pack id to force. Falls back to this pack whenever the
+      // text is too short or too mixed to call.
+      language: options.language || 'auto',
+      fallback: options.fallback || 'ro'
     };
-    const stats = { count: 0, byEntry: new Map() };
+    const packs = options.packs || null;
+    const detector = options.detect || null;
+    let pageLanguage;
+    const stats = { count: 0, byEntry: new Map(), byLanguage: {} };
 
     function setOptions(next) {
       if (next.strictness) config.strictness = next.strictness;
+      if (next.language) config.language = next.language;
+      if (next.fallback) config.fallback = next.fallback;
+      // The page may well be a different email than last time we looked.
+      pageLanguage = undefined;
     }
 
     function isSkippable(el) {
@@ -133,6 +157,78 @@
       return nodes;
     }
 
+    /**
+     * Text under `el`, skipping anything we have already rewritten. Without
+     * that exclusion the detector would read its own Romanian output back and
+     * talk itself into Romanian.
+     */
+    function contextText(el, limit) {
+      if (!el) return '';
+      const parts = [];
+      let length = 0;
+      const walker = doc.createTreeWalker(el, 1 | 4, {
+        acceptNode: function (candidate) {
+          if (candidate.nodeType === 1) {
+            if (isSkippable(candidate)) return 2;                      // REJECT
+            if (candidate.classList && candidate.classList.contains(CLASS)) return 2;
+            return 3;                                                  // SKIP
+          }
+          return 1;                                                    // ACCEPT
+        }
+      });
+      let current;
+      while ((current = walker.nextNode()) && length < limit) {
+        const value = current.nodeValue;
+        if (!value) continue;
+        parts.push(value);
+        length += value.length;
+      }
+      return parts.join(' ');
+    }
+
+    /** Climb until there is enough text around the node to judge it by. */
+    function surroundingText(node) {
+      let el = node.parentNode;
+      for (let depth = 0; el && el.nodeType === 1 && depth < CONTEXT_DEPTH; depth++) {
+        const text = contextText(el, CONTEXT_CHARS);
+        if (text.length >= CONTEXT_ENOUGH) return text;
+        if (el === doc.body) break;
+        el = el.parentNode;
+      }
+      return '';
+    }
+
+    /**
+     * Narrowest evidence first: the sentence itself, then the passage around
+     * it, then the page. Only if all three shrug do we fall back to the
+     * configured language.
+     */
+    function languageFor(node, text, matches) {
+      if (config.language !== 'auto') return config.language;
+      if (!detector) return config.fallback;
+
+      // English corporate speak is borrowed by everyone, so counting the
+      // "as per my last email" inside a Romanian sentence would wrongly vote
+      // English. A phrase sourced in any other language is the opposite --
+      // nobody writes "raman la dispozitia dumneavoastra" in an English
+      // thread -- so those are left in as evidence.
+      const ranges = matches
+        .filter(function (match) { return (match.entry.src || 'en') === 'en'; })
+        .map(function (match) { return [match.start, match.end]; });
+
+      let guess = detector.detect(text, ranges);
+      if (guess) return guess.id;
+
+      guess = detector.detect(surroundingText(node));
+      if (guess) return guess.id;
+
+      if (pageLanguage === undefined) {
+        const sample = detector.detect(contextText(doc.body, PAGE_SAMPLE_CHARS));
+        pageLanguage = sample ? sample.id : null;
+      }
+      return pageLanguage || config.fallback;
+    }
+
     function rewriteTextNode(node) {
       const text = node.nodeValue;
       if (!text || text.length < 3) return 0;
@@ -143,8 +239,16 @@
       if (!parent) return 0;
       if (parent.classList && parent.classList.contains(CLASS)) return 0;
 
-      const matches = matcher.findMatches(text, { strictness: config.strictness });
+      let matches = matcher.findMatches(text, { strictness: config.strictness });
       if (!matches.length) return 0;
+
+      const language = languageFor(node, text, matches);
+      if (packs) {
+        matches = SlangMatcherRef().relabel(text, matches, function (entryId, original) {
+          return packs.replacementFor(language, entryId, original);
+        });
+        if (!matches.length) return 0;
+      }
 
       const fragment = doc.createDocumentFragment();
       let cursor = 0;
@@ -152,9 +256,9 @@
         if (match.start > cursor) {
           fragment.appendChild(doc.createTextNode(text.slice(cursor, match.start)));
         }
-        fragment.appendChild(makeSwap(match));
+        fragment.appendChild(makeSwap(match, language));
         cursor = match.end;
-        record(match);
+        record(match, language);
       });
       if (cursor < text.length) {
         fragment.appendChild(doc.createTextNode(text.slice(cursor)));
@@ -164,18 +268,20 @@
       return matches.length;
     }
 
-    function makeSwap(match) {
+    function makeSwap(match, language) {
       const span = doc.createElement('span');
       span.className = CLASS;
       span.textContent = match.replacement;
       span.setAttribute('data-slang-original', match.original);
       span.setAttribute('data-slang-replacement', match.replacement);
       span.setAttribute('data-slang-entry', match.entry.id);
+      if (language) span.setAttribute('data-slang-lang', language);
       return span;
     }
 
-    function record(match) {
+    function record(match, language) {
       stats.count++;
+      if (language) stats.byLanguage[language] = (stats.byLanguage[language] || 0) + 1;
       const seen = stats.byEntry.get(match.entry.id);
       if (seen) {
         seen.count++;
@@ -204,6 +310,8 @@
       const restored = undoAll(doc, scope);
       stats.count = 0;
       stats.byEntry.clear();
+      stats.byLanguage = {};
+      pageLanguage = undefined;
       return restored;
     }
 

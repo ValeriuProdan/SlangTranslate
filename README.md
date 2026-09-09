@@ -1,8 +1,9 @@
 # Slang Translate
 
 A Chrome extension that reads the email you are looking at and quietly rewrites
-corporate speak into something a human would say. Romanian slang or plain-spoken
-English — your pick.
+corporate speak into something a human would say. It works out which language
+each passage is written in, so an English thread gets English slang and the
+Romanian reply underneath it gets Romanian.
 
 > **FYI, as per my last email, I will follow up before EOD.**
 
@@ -31,6 +32,36 @@ speaks whichever language you are translating into.
 to put the slang back. Flipped phrases go grey so you can tell at a glance which
 version you are reading. The highlight can be switched off in the popup; clicking
 still works.
+
+## Working out the language
+
+The corporate phrases being hunted are English whatever language the writer
+uses, so the phrase itself says nothing about them. What matters is the
+language of the text *around* it — the carrier language — and that is decided
+per passage, not per page.
+
+**Romgleza is the case that shapes the design.** Romanians borrow English
+*content* words — deploy, blocker, feature, deadline — while the grammar
+holding the sentence together stays Romanian:
+
+> Am făcut deploy la feature-ul ăla, dar mai avem un blocker.
+
+Counting vocabulary would call that English. Counting *function words* — am,
+la, dar, mai, un — calls it Romanian, correctly. So [detect.js](src/lib/detect.js)
+is a function-word counter with a diacritics bonus, and nothing cleverer.
+
+Two details do most of the work:
+
+- **The matched phrase gets no vote.** "At the end of the day" is five English
+  function words; left in the count it drowns out the short Romanian sentence
+  carrying it. English-source phrases are excluded before scoring.
+- **Romanian-source phrases *do* vote.** Nobody writes "rămânem la dispoziția
+  dumneavoastră" in an English thread, so those are evidence rather than noise.
+
+When a passage is too short to call — "FYI" on its own — the detector says so
+rather than guessing, and the caller widens the context: the sentence, then the
+surrounding block, then the page, then whatever you picked in the popup. You
+can also just force a language and skip all of it.
 
 ## Pausing
 
@@ -100,11 +131,19 @@ The phrases being hunted are English corporate speak no matter what they get
 rewritten into, so the patterns are shared and only the replacements differ:
 
 ```
-src/data/phrases.js    id + patterns          (shared source side)
-src/data/slang-ro.js   id -> Romanian slang
-src/data/slang-en.js   id -> English slang
-src/data/packs.js      combines them for the matcher
+src/data/phrases.js     English corporate speak   (id + patterns)
+src/data/phrases-ro.js  Romanian corporate speak  (id + patterns)
+src/data/slang-ro.js    id -> Romanian slang
+src/data/slang-en.js    id -> English slang
+src/data/packs.js       combines them for the matcher
 ```
+
+Phrases are split by **source language**, which is not the same as the language
+they get rewritten into. English corporate speak turns up in everybody's inbox,
+so every pack needs an answer for it. Romanian corporate speak — "conform celor
+discutate", "cu stimă", "rămân la dispoziție" — only the Romanian pack does. A
+pack with no words for a phrase leaves it alone rather than borrowing another
+language's joke, and a test enforces exactly that.
 
 ### Adding a phrase
 
@@ -127,11 +166,27 @@ email always gets the same joke — which also means that with two variants you
 cannot be sure *which* one a given phrase gets. Where the wording matters, give
 the phrase a single variant. A test fails if a pack forgets an id.
 
-**The voice matters more than the accuracy.** Write what somebody would
-actually say out loud, not a polite gloss of what the corporate phrase means.
-"FYI" becomes `auzi ba` / `yo, listen up`, not "ca să știi și tu" / "for your
-information". If a replacement reads like a dictionary entry, it is wrong even
-when it is correct.
+### Two rules for replacements
+
+**1. Keep the grammar.** The replacement is dropped into the sentence where the
+original stood, so it has to be the same kind of phrase. "OOO" is a state you
+can be in — *"I'll be OOO next week"* — so it becomes `tolănit la soare`, an
+adjectival phrase. `sunt plecat` is a whole clause and would leave the sentence
+in pieces: *"I'll be sunt plecat next week"*. Same for nouns: "our cadence"
+needs a noun (`ritmul întâlnirilor`), not a question (`cât de des`).
+
+Where one entry's patterns covered both a verb and a noun — `align` and
+`alignment`, `escalate` and `escalation` — they are now separate entries,
+because no single replacement can be correct for both.
+
+The one thing this cannot fix is inflection: English has no agreement to match,
+but *"it moves the needle"* and *"it will move the needle"* want different
+Romanian verb forms and only get one. Bare infinitives are the best compromise.
+
+**2. Then be funny.** Write what somebody would actually say out loud, not a
+polite gloss. "FYI" becomes `auzi ba` / `yo, listen up`, not "ca să știi și tu"
+/ "for your information". A replacement that reads like a dictionary entry is
+wrong even when it is correct.
 
 ### Adding a language
 
@@ -145,6 +200,11 @@ register(root.SlangPackFR || (req ? req('./slang-fr.js') : null));
 Add the file to `manifest.json` and `popup.html`, and it shows up in the picker
 with no other changes. Partial packs are fine — phrases a pack has no words for
 are simply left alone.
+
+To have it detected automatically, add its function words to
+[detect.js](src/lib/detect.js). Keep out anything that also exists in another
+language: `in`, `are`, `am` and `care` are all traps between English and
+Romanian, and are deliberately absent from both lists.
 
 ### Pattern syntax
 
@@ -178,8 +238,10 @@ The DOM half cannot run in plain node, and a headless-browser dependency would
 outweigh the extension itself — so `test/dom.html` runs in Chrome (which anyone
 building a Chrome extension already has) and `test/run-dom.js` reads the results
 back out of the page. It covers walking the page, skipping compose boxes and
-inputs, the click toggle, the selection guard, and undo on a page where some
-phrases are flipped and others are not. Set `CHROME_PATH` to pick a binary; the
+inputs, the click toggle, the selection guard, undo on a page where some phrases
+are flipped and others are not, and a single page holding an English passage, a
+romgleza passage and a Romanian one — checking each is rewritten in its own
+language and that the same phrase comes out differently in each. Set `CHROME_PATH` to pick a binary; the
 run is skipped, not failed, if no Chrome is found.
 
 ## Layout
@@ -192,6 +254,7 @@ src/lib/pattern.js       the "?optional (a|b)" DSL
 src/lib/matcher.js       indexing and match selection
 src/lib/dom-rewrite.js   DOM walking, swapping, undo (no chrome.* deps)
 src/lib/pause.js         timed-pause arithmetic
+src/lib/detect.js        which language is this, actually
 src/data/               phrases + language packs
 src/content/content.js   settings, MutationObserver, messaging
 src/popup/              toolbar popup
@@ -205,5 +268,6 @@ test/dom.html            browser suite, run by test/run-dom.js
 
 - A per-site toggle, and a "translate this page" action for non-mail pages.
 - A keyboard shortcut for pause.
+- Verb inflection, so a replacement can agree with the sentence around it.
 - User-defined phrases stored in `chrome.storage.sync`.
 - More languages — the pack format is the whole story.

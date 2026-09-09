@@ -85,6 +85,9 @@ select {
 .count b { font-size: 22px; color: var(--accent); font-variant-numeric: tabular-nums; }
 .count span { color: var(--muted); font-size: 11.5px; }
 
+.detected { margin: 7px 0 0; color: var(--muted); font-size: 11px; }
+.detected b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+
 .top { list-style: none; margin: 10px 0 0; padding: 0; }
 .top li {
   display: flex; align-items: baseline; gap: 6px;

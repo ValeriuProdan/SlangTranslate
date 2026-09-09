@@ -14,15 +14,24 @@
 </div>
 <div id="compose" contenteditable="true">FYI I will follow up before EOD.</div>
 <textarea id="draft">Please advise at your earliest convenience.</textarea>
+
+<!-- One page, three passages, three different answers. -->
+<div id="mixed">
+  <p id="p-en">Hi team, just checking in on the action items before EOD. FYI, we are late.</p>
+  <p id="p-ro">Salut, hai sa dam un sync maine ca avem deadline la task-urile astea. FYI, am intarziat.</p>
+  <p id="p-corp">Ramanem la dispozitia dumneavoastra pentru orice detalii. Cu stima.</p>
+</div>
 <pre id="results"></pre>
 
 <script src="../src/lib/normalize.js"></script>
 <script src="../src/lib/fuzzy.js"></script>
 <script src="../src/lib/pattern.js"></script>
 <script src="../src/lib/matcher.js"></script>
+<script src="../src/lib/detect.js"></script>
 <script src="../src/lib/dom-rewrite.js"></script>
 <script src="../src/lib/pause.js"></script>
 <script src="../src/data/phrases.js"></script>
+<script src="../src/data/phrases-ro.js"></script>
 <script src="../src/data/slang-ro.js"></script>
 <script src="../src/data/slang-en.js"></script>
 <script src="../src/data/packs.js"></script>
@@ -136,6 +145,78 @@
     SlangDomRewrite.undoAll(document);
     eq(mail.textContent, before, 'a mixed page must still restore exactly');
     eq(spans().length, 0, 'no spans left behind');
+  });
+
+  // ---- language detection ------------------------------------------------
+
+  const mixed = document.getElementById('mixed');
+  const autoRewriter = SlangDomRewrite.createRewriter({
+    document: document,
+    matcher: SlangMatcher.createMatcher(SlangPacks.build(SlangPacks.DEFAULT_ID)),
+    language: 'auto',
+    fallback: 'en',
+    packs: SlangPacks,
+    detect: SlangDetect
+  });
+  autoRewriter.rewrite(mixed);
+
+  const swapsIn = function (id) {
+    return Array.prototype.slice.call(document.querySelectorAll('#' + id + ' span.slang-swap'));
+  };
+  const langsIn = function (id) {
+    return swapsIn(id).map(function (span) { return span.getAttribute('data-slang-lang'); });
+  };
+
+  test('an English passage is rewritten in English', function () {
+    const spans = swapsIn('p-en');
+    ok(spans.length, 'expected swaps');
+    langsIn('p-en').forEach(function (lang) { eq(lang, 'en'); });
+  });
+
+  test('a romgleza passage is rewritten in Romanian', function () {
+    // English nouns, Romanian grammar: the writer is Romanian.
+    const spans = swapsIn('p-ro');
+    ok(spans.length, 'expected swaps');
+    langsIn('p-ro').forEach(function (lang) { eq(lang, 'ro'); });
+  });
+
+  test('the same phrase gets different words in each passage', function () {
+    const pick = function (id) {
+      return swapsIn(id).filter(function (span) {
+        return span.getAttribute('data-slang-entry') === 'fyi';
+      })[0];
+    };
+    const en = pick('p-en');
+    const ro = pick('p-ro');
+    ok(en && ro, 'FYI should be found in both passages');
+    ok(en.textContent !== ro.textContent,
+      'same phrase, two languages, same words: ' + en.textContent);
+  });
+
+  test('Romanian corporate speak is caught in Romanian text', function () {
+    const spans = swapsIn('p-corp');
+    ok(spans.length, 'expected the Romanian formulas to be rewritten');
+    langsIn('p-corp').forEach(function (lang) { eq(lang, 'ro'); });
+    eq(document.getElementById('p-corp').textContent.indexOf('dispozitia'), -1,
+      'the formula should be gone');
+  });
+
+  test('the stats know which language went where', function () {
+    const byLanguage = autoRewriter.stats.byLanguage;
+    ok(byLanguage.en > 0, 'expected English swaps');
+    ok(byLanguage.ro > 0, 'expected Romanian swaps');
+  });
+
+  test('forcing a language overrides detection', function () {
+    autoRewriter.undoAll(mixed);
+    autoRewriter.setOptions({ language: 'en' });
+    autoRewriter.rewrite(mixed);
+    langsIn('p-ro').forEach(function (lang) {
+      eq(lang, 'en', 'a forced language should win over the text');
+    });
+    // Romanian-only phrases have no English words, so they are left alone.
+    ok(document.getElementById('p-corp').textContent.indexOf('dispozitia') !== -1,
+      'Romanian corporate speak should be untouched when forced to English');
   });
 
   document.getElementById('results').textContent = results.join('\n');

@@ -2,7 +2,7 @@
 
 const DEFAULTS = {
   enabled: true,
-  language: SlangPacks.DEFAULT_ID,
+  language: SlangPacks.AUTO,
   strictness: 'normal',
   highlight: true
 };
@@ -18,6 +18,9 @@ const STRINGS = {
     hintOff: 'totul ramane in engleza de corporatie',
     languageLabel: 'Limba',
     languageHint: 'in ce le traducem',
+    languageHintAuto: 'o ghicim din text, romgleza inclusiv',
+    languageAuto: 'Automat',
+    autoLine: 'automat',
     strictnessLabel: 'Toleranta la typo-uri',
     strictnessHint: 'prinde si variante scrise gresit',
     strict: 'strict',
@@ -48,6 +51,9 @@ const STRINGS = {
     hintOff: 'corporate speak left untouched',
     languageLabel: 'Language',
     languageHint: 'what to rewrite into',
+    languageHintAuto: 'worked out from the text, romgleza included',
+    languageAuto: 'Automatic',
+    autoLine: 'automatic',
     strictnessLabel: 'Typo tolerance',
     strictnessHint: 'also catches misspelled variants',
     strict: 'strict',
@@ -87,11 +93,18 @@ const els = {
   pauseRow: document.getElementById('pause-row'),
   pauseHint: document.getElementById('pause-hint'),
   pauseActions: document.getElementById('pause-actions'),
-  version: document.getElementById('version')
+  version: document.getElementById('version'),
+  languageHint: document.getElementById('language-hint'),
+  detected: document.getElementById('detected')
 };
 
 let current = Object.assign({}, DEFAULTS);
 let pausedUntil = 0;
+
+// "Automatic" leads, then each pack as an explicit override.
+const autoOption = document.createElement('option');
+autoOption.value = SlangPacks.AUTO;
+els.language.append(autoOption);
 
 SlangPacks.list().forEach(function (pack) {
   const option = document.createElement('option');
@@ -212,11 +225,14 @@ function paint() {
   });
   els.hint.textContent = current.enabled ? text.hintOn : text.hintOff;
 
+  const auto = current.language === SlangPacks.AUTO;
+  autoOption.textContent = text.languageAuto;
+  els.languageHint.textContent = auto ? text.languageHintAuto : text.languageHint;
+
   const pack = SlangPacks.list().filter(function (p) { return p.id === current.language; })[0];
-  if (pack) {
-    els.dict.textContent = pack.nativeLabel.toLowerCase() + ' · ' +
-      pack.coverage + ' ' + text.phrases;
-  }
+  const name = auto ? text.autoLine : (pack ? pack.nativeLabel.toLowerCase() : '');
+  const covered = auto ? SlangPacks.phraseCount : (pack ? pack.coverage : 0);
+  els.dict.textContent = name + ' · ' + covered + ' ' + text.phrases;
   if (!els.empty.dataset.locked) els.empty.textContent = text.emptyDefault;
   paintPause();
 }
@@ -243,6 +259,18 @@ function render(data) {
     els.dict.textContent = (els.dict.textContent || '') + ', ' +
       data.dictionary.patterns + ' ' + text.patterns;
   }
+  const byLanguage = data.byLanguage || {};
+  const seen = Object.keys(byLanguage).filter(function (id) { return byLanguage[id]; });
+  if (current.language === SlangPacks.AUTO && seen.length) {
+    els.detected.textContent = '';
+    seen.forEach(function (id, index) {
+      const pack = SlangPacks.list().filter(function (p) { return p.id === id; })[0];
+      if (index) els.detected.append(document.createTextNode(' · '));
+      els.detected.append(make('b', '', String(byLanguage[id])));
+      els.detected.append(document.createTextNode(' ' + (pack ? pack.nativeLabel : id)));
+    });
+  }
+
   if (!data.top.length) {
     els.empty.dataset.locked = '1';
     els.empty.textContent = data.count ? text.emptyDefault : text.emptyNone;

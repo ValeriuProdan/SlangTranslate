@@ -43,7 +43,7 @@
   <div class="row">
     <span>
       <strong data-i18n="languageLabel"></strong>
-      <em data-i18n="languageHint"></em>
+      <em id="language-hint"></em>
     </span>
     <select id="language"></select>
   </div>
@@ -70,6 +70,7 @@
 
   <section class="stats">
     <div class="count"><b id="count">0</b><span data-i18n="countSuffix"></span></div>
+    <p class="detected" id="detected"></p>
     <ul id="top" class="top"></ul>
     <p class="empty" id="empty"></p>
   </section>
@@ -81,6 +82,7 @@
 
   <script src="../lib/pause.js"></script>
   <script src="../data/phrases.js"></script>
+  <script src="../data/phrases-ro.js"></script>
   <script src="../data/slang-ro.js"></script>
   <script src="../data/slang-en.js"></script>
   <script src="../data/packs.js"></script>
