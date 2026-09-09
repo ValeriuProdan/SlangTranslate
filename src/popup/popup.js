@@ -25,6 +25,15 @@ const STRINGS = {
     loose: 'lejer',
     originalLabel: 'Arata originalul',
     originalHint: 'subliniat, cu tooltip la hover',
+    pauseLabel: 'Pauza',
+    pauseHint: 'oprire temporara, reporneste singura',
+    pause15: '15 min',
+    pause60: '1 ora',
+    pauseTomorrow: 'pana maine',
+    resume: 'Reia acum',
+    pausedPrefix: 'in pauza pana la',
+    tomorrowAt: 'maine la',
+    leftSuffix: 'ramase',
     countSuffix: 'traduceri pe pagina asta',
     emptyDefault: 'Deschide un mail corporatist si revino.',
     emptyNone: 'Niciun corporatism gasit. Suspect.',
@@ -46,6 +55,15 @@ const STRINGS = {
     loose: 'loose',
     originalLabel: 'Show the original',
     originalHint: 'underlined, with a tooltip on hover',
+    pauseLabel: 'Pause',
+    pauseHint: 'temporary, resumes on its own',
+    pause15: '15 min',
+    pause60: '1 hour',
+    pauseTomorrow: 'until tomorrow',
+    resume: 'Resume now',
+    pausedPrefix: 'paused until',
+    tomorrowAt: 'tomorrow at',
+    leftSuffix: 'left',
     countSuffix: 'swaps on this page',
     emptyDefault: 'Open a corporate email and come back.',
     emptyNone: 'No corporate speak found. Suspicious.',
@@ -65,10 +83,14 @@ const els = {
   top: document.getElementById('top'),
   empty: document.getElementById('empty'),
   hint: document.getElementById('state-hint'),
-  dict: document.getElementById('dict-line')
+  dict: document.getElementById('dict-line'),
+  pauseRow: document.getElementById('pause-row'),
+  pauseHint: document.getElementById('pause-hint'),
+  pauseActions: document.getElementById('pause-actions')
 };
 
 let current = Object.assign({}, DEFAULTS);
+let pausedUntil = 0;
 
 SlangPacks.list().forEach(function (pack) {
   const option = document.createElement('option');
@@ -93,8 +115,61 @@ chrome.storage.sync.get(DEFAULTS, function (config) {
 els.enabled.addEventListener('change', function () {
   current.enabled = els.enabled.checked;
   chrome.storage.sync.set({ enabled: current.enabled });
+  // Switching it back on is an explicit "I want it now", so it also
+  // cancels a running pause.
+  if (current.enabled && SlangPause.isPaused(pausedUntil, Date.now())) {
+    setPause(0);
+  } else {
+    paint();
+  }
+});
+
+chrome.storage.local.get({ pausedUntil: 0 }, function (local) {
+  pausedUntil = local.pausedUntil || 0;
   paint();
 });
+
+function setPause(until) {
+  pausedUntil = until;
+  chrome.storage.local.set({ pausedUntil: until });
+  paint();
+}
+
+/** The pause row is either a set of durations or a countdown. */
+function paintPause() {
+  const text = strings();
+  const now = Date.now();
+  const paused = SlangPause.isPaused(pausedUntil, now);
+
+  els.pauseRow.classList.toggle('is-paused', paused);
+  els.pauseActions.textContent = '';
+
+  if (paused) {
+    const at = SlangPause.isNextDay(pausedUntil, now)
+      ? text.tomorrowAt + ' ' + SlangPause.formatUntil(pausedUntil)
+      : SlangPause.formatUntil(pausedUntil);
+    els.pauseHint.textContent = text.pausedPrefix + ' ' + at + ' \u00b7 ' +
+      SlangPause.formatRemaining(SlangPause.remaining(pausedUntil, now)) + ' ' + text.leftSuffix;
+    els.pauseActions.append(button(text.resume, 'resume', function () { setPause(0); }));
+    return;
+  }
+
+  els.pauseHint.textContent = text.pauseHint;
+  SlangPause.DURATIONS.forEach(function (duration) {
+    els.pauseActions.append(button(text[duration.labelKey], '', function () {
+      setPause(SlangPause.until(duration.id, Date.now()));
+    }));
+  });
+}
+
+function button(label, className, onClick) {
+  const el = document.createElement('button');
+  el.type = 'button';
+  el.className = className;
+  el.textContent = label;
+  el.addEventListener('click', onClick);
+  return el;
+}
 els.language.addEventListener('change', function () {
   current.language = els.language.value;
   chrome.storage.sync.set({ language: current.language });
@@ -126,6 +201,7 @@ function paint() {
       pack.coverage + ' ' + text.phrases;
   }
   if (!els.empty.dataset.locked) els.empty.textContent = text.emptyDefault;
+  paintPause();
 }
 
 // The content script only lives on the supported mail hosts, so no answer

@@ -25,11 +25,34 @@ to anything.
 
 It activates on Gmail, Outlook (web), Yahoo Mail, Proton Mail, Fastmail and
 Zoho Mail. The toolbar badge shows how many phrases were swapped on the page;
-the popup has the language picker, the on/off switch, the typo tolerance, and
-the list of what it caught. The popup speaks whichever language you are
-translating into.
+the popup has the language picker, the on/off switch, the pause, the typo
+tolerance, and the list of what it caught. The popup speaks whichever language
+you are translating into.
 
 Hover any rewritten phrase to see the corporate original.
+
+## Pausing
+
+The on/off switch stays where you put it. **Pause** is the temporary one — for
+when you need to read an email as its author actually wrote it:
+
+| | |
+| --- | --- |
+| 15 min | back shortly |
+| 1 hour | back after this meeting |
+| until tomorrow | back at 08:00 the next morning |
+
+The page reverts to plain corporate English immediately and puts itself back
+when the time is up. The badge shows `||` while paused, and the popup counts
+down. Flipping the main switch back on cancels a running pause, since that is
+an explicit "I want it now".
+
+Pause needs no extra Chrome permission: the state is one timestamp in
+`chrome.storage.local`, and the content script sets a single timer for the
+remaining time. Because everything is derived by comparing that timestamp to
+now, a stale value is harmless — once it is in the past, nothing is paused. It
+is deliberately local rather than synced: pausing on your laptop should not
+silently pause your desktop too.
 
 ## Try it without installing
 
@@ -128,7 +151,9 @@ No dependencies. Covers normalization, the typo budget, the pattern parser and
 the matcher, plus integrity checks: unique ids, no pattern owned by two
 phrases, every pack covering every phrase, no pack inventing unknown ids, and a
 reachability check that every pattern actually fires on the plainest sentence
-it should match.
+it should match. The pause arithmetic is pure and tested directly, and the
+popup's label tables are checked against the markup so a missing translation
+fails the build instead of rendering as an empty row.
 
 ## Layout
 
@@ -139,6 +164,7 @@ src/lib/fuzzy.js         edit distance + typo budget
 src/lib/pattern.js       the "?optional (a|b)" DSL
 src/lib/matcher.js       indexing and match selection
 src/lib/dom-rewrite.js   DOM walking, swapping, undo (no chrome.* deps)
+src/lib/pause.js         timed-pause arithmetic
 src/data/               phrases + language packs
 src/content/content.js   settings, MutationObserver, messaging
 src/popup/              toolbar popup
@@ -149,5 +175,6 @@ demo/index.html          fake inbox for tuning
 ## Roadmap
 
 - A per-site toggle, and a "translate this page" action for non-mail pages.
+- A keyboard shortcut for pause.
 - User-defined phrases stored in `chrome.storage.sync`.
 - More languages — the pack format is the whole story.

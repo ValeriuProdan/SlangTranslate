@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Slang Translate",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Rewrites corporate speak in your inbox as slang. Romanian and English.",
   "permissions": [
     "storage"
@@ -43,6 +43,7 @@
         "src/lib/pattern.js",
         "src/lib/matcher.js",
         "src/lib/dom-rewrite.js",
+        "src/lib/pause.js",
         "src/data/phrases.js",
         "src/data/slang-ro.js",
         "src/data/slang-en.js",

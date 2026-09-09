@@ -15,7 +15,11 @@
     showOriginal: true
   };
 
+  const LOCAL_DEFAULTS = { pausedUntil: 0 };
+
   let config = Object.assign({}, DEFAULTS);
+  let pausedUntil = 0;
+  let resumeTimer = null;
   let matcher = null;
   let rewriter = null;
   let observer = null;
@@ -42,6 +46,33 @@
     return rewriter;
   }
 
+  function isPaused() {
+    return window.SlangPause.isPaused(pausedUntil, Date.now());
+  }
+
+  /** Switched on and not snoozed. */
+  function active() {
+    return config.enabled && !isPaused();
+  }
+
+  /**
+   * Wake up when the pause expires and put the page back. Nothing else
+   * would notice: no alarm, no polling, and a tab opened after expiry is
+   * simply not paused.
+   */
+  function scheduleResume() {
+    if (resumeTimer) {
+      clearTimeout(resumeTimer);
+      resumeTimer = null;
+    }
+    const left = window.SlangPause.remaining(pausedUntil, Date.now());
+    if (!left) return;
+    resumeTimer = setTimeout(function () {
+      resumeTimer = null;
+      refresh();
+    }, left + 250);
+  }
+
   // ---------------------------------------------------------------- scheduling
 
   function enqueue(node) {
@@ -58,7 +89,7 @@
    */
   function flush() {
     scheduled = false;
-    if (!config.enabled) {
+    if (!active()) {
       pending.length = 0;
       return;
     }
@@ -72,7 +103,7 @@
     });
     startObserving();
 
-    if (swapped) pushCount();
+    if (swapped) pushState();
     if (pending.length) enqueue(pending.shift());
   }
 
@@ -102,9 +133,14 @@
 
   // ---------------------------------------------------------------- plumbing
 
-  function pushCount() {
+  function pushState() {
     try {
-      chrome.runtime.sendMessage({ type: 'slang:count', count: ensureRewriter().stats.count });
+      chrome.runtime.sendMessage({
+        type: 'slang:count',
+        count: ensureRewriter().stats.count,
+        paused: isPaused(),
+        pausedUntil: pausedUntil
+      });
     } catch (err) {
       // The extension context goes away on reload; nothing to do about it.
     }
@@ -116,21 +152,52 @@
 
   function start() {
     applyMarks();
-    if (!config.enabled) return;
+    if (!active()) return;
     startObserving();
     enqueue(document.body);
   }
 
+  /**
+   * Undo everything and rewrite from scratch. Language, strictness, marks
+   * and pause all change what the page should look like, and this is the
+   * simplest thing that is correct for all of them.
+   */
+  function refresh() {
+    stopObserving();
+    if (rewriter) {
+      rewriter.undoAll();
+      rewriter.setOptions(config);
+    } else {
+      // The rewriter went away with the old language; the spans still know
+      // their originals, so undo needs nothing else.
+      window.SlangDomRewrite.undoAll(document);
+    }
+    pushState();
+    applyMarks();
+    if (active()) start();
+  }
+
   chrome.storage.sync.get(DEFAULTS, function (stored) {
     config = Object.assign({}, DEFAULTS, stored);
-    if (document.body) {
-      start();
-    } else {
-      document.addEventListener('DOMContentLoaded', start, { once: true });
-    }
+    chrome.storage.local.get(LOCAL_DEFAULTS, function (local) {
+      pausedUntil = local.pausedUntil || 0;
+      scheduleResume();
+      if (document.body) {
+        start();
+      } else {
+        document.addEventListener('DOMContentLoaded', start, { once: true });
+      }
+    });
   });
 
   chrome.storage.onChanged.addListener(function (changes, area) {
+    if (area === 'local') {
+      if (!changes.pausedUntil) return;
+      pausedUntil = changes.pausedUntil.newValue || 0;
+      scheduleResume();
+      refresh();
+      return;
+    }
     if (area !== 'sync') return;
     let touched = false;
     Object.keys(changes).forEach(function (key) {
@@ -143,32 +210,18 @@
         rewriter = null;
       }
     });
-    if (!touched) return;
-
-    // Language, strictness and marks all change what the page should look
-    // like, so the simplest correct thing is to undo everything and rewrite
-    // from scratch.
-    stopObserving();
-    if (rewriter) {
-      rewriter.undoAll();
-      rewriter.setOptions(config);
-    } else {
-      // The rewriter went away with the old language; the spans still know
-      // their originals, so undo needs nothing else.
-      window.SlangDomRewrite.undoAll(document);
-    }
-    pushCount();
-    applyMarks();
-    if (config.enabled) start();
+    if (touched) refresh();
   });
 
   chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     if (!message || message.type !== 'slang:stats') return false;
-    const active = ensureRewriter();
+    const current = ensureRewriter();
     sendResponse({
       ok: true,
-      count: active.stats.count,
-      top: active.topEntries(6),
+      count: current.stats.count,
+      top: current.topEntries(6),
+      paused: isPaused(),
+      pausedUntil: pausedUntil,
       language: config.language,
       languages: window.SlangPacks.list(),
       dictionary: {

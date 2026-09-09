@@ -21,6 +21,14 @@
     <input type="checkbox" id="enabled" class="switch">
   </label>
 
+  <div class="row pause-row" id="pause-row">
+    <span>
+      <strong data-i18n="pauseLabel"></strong>
+      <em id="pause-hint"></em>
+    </span>
+    <span class="pause-actions" id="pause-actions"></span>
+  </div>
+
   <div class="row">
     <span>
       <strong data-i18n="languageLabel"></strong>
@@ -57,6 +65,7 @@
 
   <footer data-i18n="footer"></footer>
 
+  <script src="../lib/pause.js"></script>
   <script src="../data/phrases.js"></script>
   <script src="../data/slang-ro.js"></script>
   <script src="../data/slang-en.js"></script>

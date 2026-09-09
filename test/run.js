@@ -7,6 +7,9 @@ const N = require('../src/lib/normalize.js');
 const F = require('../src/lib/fuzzy.js');
 const P = require('../src/lib/pattern.js');
 const M = require('../src/lib/matcher.js');
+const PAUSE = require('../src/lib/pause.js');
+const fs = require('fs');
+const path = require('path');
 const PHRASES = require('../src/data/phrases.js');
 const PACKS = require('../src/data/packs.js');
 
@@ -352,6 +355,140 @@ test('a partial pack drops only the phrases it lacks', function () {
   const built = PACKS.build('test-partial');
   eq(built.entries.length, 1);
   eq(built.entries[0].id, 'fyi');
+});
+
+// ---------------------------------------------------------------- pause
+
+// A fixed afternoon to reason about, so "until tomorrow" is deterministic.
+const AFTERNOON = new Date(2026, 8, 9, 14, 30, 0).getTime();
+const MINUTE = 60000;
+
+test('a pause in the future is a pause', function () {
+  ok(PAUSE.isPaused(AFTERNOON + MINUTE, AFTERNOON));
+});
+
+test('an expired pause is not a pause', function () {
+  ok(!PAUSE.isPaused(AFTERNOON - MINUTE, AFTERNOON), "a stale timestamp must not keep it paused");
+  ok(!PAUSE.isPaused(0, AFTERNOON), "zero means never paused");
+});
+
+test('fixed durations land where expected', function () {
+  eq(PAUSE.until('15m', AFTERNOON), AFTERNOON + 15 * MINUTE);
+  eq(PAUSE.until('1h', AFTERNOON), AFTERNOON + 60 * MINUTE);
+});
+
+test('an unknown duration pauses nothing', function () {
+  eq(PAUSE.until('next tuesday', AFTERNOON), 0);
+});
+
+test('"until tomorrow" means the next resume hour', function () {
+  const end = PAUSE.until('tomorrow', AFTERNOON);
+  const date = new Date(end);
+  eq(date.getHours(), PAUSE.RESUME_HOUR);
+  eq(date.getMinutes(), 0);
+  eq(date.getDate(), new Date(AFTERNOON).getDate() + 1, 'the next calendar day');
+  ok(PAUSE.isNextDay(end, AFTERNOON));
+});
+
+test('pausing after midnight resumes the same morning', function () {
+  // At 03:00 the next resume hour is 08:00 today, not tomorrow.
+  const lateNight = new Date(2026, 8, 9, 3, 0, 0).getTime();
+  const end = PAUSE.until('tomorrow', lateNight);
+  eq(new Date(end).getDate(), new Date(lateNight).getDate());
+  ok(!PAUSE.isNextDay(end, lateNight));
+  ok(end > lateNight, "and it is still in the future");
+});
+
+test('remaining time never goes negative', function () {
+  eq(PAUSE.remaining(AFTERNOON - MINUTE, AFTERNOON), 0);
+  eq(PAUSE.remaining(AFTERNOON + 5 * MINUTE, AFTERNOON), 5 * MINUTE);
+  eq(PAUSE.remaining(0, AFTERNOON), 0);
+});
+
+test('the countdown reads sensibly', function () {
+  eq(PAUSE.formatRemaining(30 * 1000), '<1m');
+  eq(PAUSE.formatRemaining(MINUTE), '1m');
+  eq(PAUSE.formatRemaining(45 * MINUTE), '45m');
+  eq(PAUSE.formatRemaining(60 * MINUTE), '1h');
+  eq(PAUSE.formatRemaining(90 * MINUTE), '1h 30m');
+  eq(PAUSE.formatRemaining(0), '');
+});
+
+test('the end time is zero-padded wall clock', function () {
+  eq(PAUSE.formatUntil(new Date(2026, 8, 9, 9, 5, 0).getTime()), '09:05');
+  eq(PAUSE.formatUntil(new Date(2026, 8, 9, 21, 25, 0).getTime()), '21:25');
+});
+
+test('every offered duration actually pauses', function () {
+  PAUSE.DURATIONS.forEach(function (duration) {
+    const end = PAUSE.until(duration.id, AFTERNOON);
+    ok(end > AFTERNOON, duration.id + ' should end in the future');
+    ok(PAUSE.isPaused(end, AFTERNOON), duration.id + ' should read as paused');
+    ok(duration.labelKey, duration.id + ' needs a label key for the popup');
+  });
+});
+
+// ---------------------------------------------------------------- popup labels
+
+/**
+ * The popup labels itself from a table keyed by language. A missing key
+ * renders as an empty row rather than an error, so it is worth a test:
+ * read the tables out of the source and check them against the markup.
+ */
+function popupStrings() {
+  const src = fs.readFileSync(path.join(__dirname, '../src/popup/popup.js'), 'utf8');
+  const start = src.indexOf('const STRINGS = ');
+  const end = src.indexOf('\n};', start);
+  ok(start !== -1 && end !== -1, 'could not find the STRINGS table');
+  const literal = src.slice(start + 'const STRINGS = '.length, end + 2);
+  return new Function('return ' + literal)();
+}
+
+test('every language labels the popup with the same keys', function () {
+  const strings = popupStrings();
+  const languages = Object.keys(strings);
+  ok(languages.length >= 2, 'expected at least two languages');
+  const reference = Object.keys(strings[languages[0]]).sort();
+  languages.forEach(function (id) {
+    const keys = Object.keys(strings[id]).sort();
+    const missing = reference.filter(function (k) { return keys.indexOf(k) === -1; });
+    const extra = keys.filter(function (k) { return reference.indexOf(k) === -1; });
+    ok(!missing.length, id + ' is missing labels: ' + missing.join(', '));
+    ok(!extra.length, id + ' has labels no other language has: ' + extra.join(', '));
+  });
+});
+
+test('no popup label is blank', function () {
+  const strings = popupStrings();
+  Object.keys(strings).forEach(function (id) {
+    Object.keys(strings[id]).forEach(function (key) {
+      const value = strings[id][key];
+      ok(typeof value === 'string' && value.trim().length, id + '.' + key + ' is blank');
+    });
+  });
+});
+
+test('every data-i18n in the markup has a string', function () {
+  const strings = popupStrings();
+  const html = fs.readFileSync(path.join(__dirname, '../src/popup/popup.html'), 'utf8');
+  const used = (html.match(/data-i18n="([^"]+)"/g) || []).map(function (attr) {
+    return attr.slice(11, -1);
+  });
+  ok(used.length, 'expected the popup to use data-i18n');
+  Object.keys(strings).forEach(function (id) {
+    used.forEach(function (key) {
+      ok(strings[id][key], id + ' has no string for data-i18n="' + key + '"');
+    });
+  });
+});
+
+test('the pause durations all have labels in every language', function () {
+  const strings = popupStrings();
+  Object.keys(strings).forEach(function (id) {
+    PAUSE.DURATIONS.forEach(function (duration) {
+      ok(strings[id][duration.labelKey], id + ' has no label for the ' + duration.id + ' pause');
+    });
+  });
 });
 
 // ---------------------------------------------------------------- report
