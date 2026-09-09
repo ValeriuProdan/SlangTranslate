@@ -1,9 +1,10 @@
 /**
  * Generates the extension icons as PNGs with no dependencies.
  *
- * The mark: a rounded tile in the Romanian tricolour with a speech bubble
- * punched out of it. Everything is drawn as signed geometry and 4x
- * supersampled, so the small sizes stay clean.
+ * The mark: a speech bubble holding two arrows swapping places -- what was
+ * said, restated as something else. Drawn as signed geometry and 4x
+ * supersampled so the 16px version stays readable, which is the only size
+ * most people will ever really look at.
  *
  * Usage: npm run icons
  */
@@ -14,11 +15,9 @@ const zlib = require('zlib');
 const SIZES = [16, 32, 48, 128];
 const SS = 4; // supersampling factor
 
-const BLUE = [0x00, 0x2b, 0x7f];
-const YELLOW = [0xfc, 0xd1, 0x16];
-const RED = [0xce, 0x11, 0x26];
-const WHITE = [0xff, 0xff, 0xff];
-const INK = [0x14, 0x16, 0x1c];
+const INK = [0x1e, 0x22, 0x30];   // the tile, so the mark sits on any toolbar
+const VIVID = [0xff, 0x7a, 0x3d]; // the bubble
+const WHITE = [0xff, 0xff, 0xff]; // the arrows
 
 function insideRoundedRect(x, y, x0, y0, x1, y1, r) {
   if (x < x0 || x > x1 || y < y0 || y > y1) return false;
@@ -29,13 +28,7 @@ function insideRoundedRect(x, y, x0, y0, x1, y1, r) {
   return dx * dx + dy * dy <= r * r;
 }
 
-function insideCircle(x, y, cx, cy, r) {
-  const dx = x - cx;
-  const dy = y - cy;
-  return dx * dx + dy * dy <= r * r;
-}
-
-// Barycentric point-in-triangle, used for the bubble's tail.
+// Barycentric point-in-triangle, used for the tail and the arrowheads.
 function insideTriangle(x, y, ax, ay, bx, by, cx, cy) {
   const d = (by - cy) * (ax - cx) + (cx - bx) * (ay - cy);
   const a = ((by - cy) * (x - cx) + (cx - bx) * (y - cy)) / d;
@@ -43,24 +36,29 @@ function insideTriangle(x, y, ax, ay, bx, by, cx, cy) {
   return a >= 0 && b >= 0 && a + b <= 1;
 }
 
+function insideBar(x, y, x0, x1, centreY, halfHeight) {
+  return x >= x0 && x <= x1 && Math.abs(y - centreY) <= halfHeight;
+}
+
 /** Colour at a point in unit space, or null for transparent. */
 function sample(x, y) {
   if (!insideRoundedRect(x, y, 0, 0, 1, 1, 0.22)) return null;
 
-  const bubble = insideRoundedRect(x, y, 0.14, 0.20, 0.86, 0.64, 0.16) ||
-    insideTriangle(x, y, 0.30, 0.60, 0.50, 0.60, 0.31, 0.86);
+  const body = insideRoundedRect(x, y, 0.09, 0.13, 0.91, 0.71, 0.17);
+  const tail = insideTriangle(x, y, 0.27, 0.67, 0.46, 0.67, 0.25, 0.91);
+  if (!body && !tail) return INK;
 
-  if (bubble) {
-    const dotY = 0.42;
-    for (const dotX of [0.32, 0.50, 0.68]) {
-      if (insideCircle(x, y, dotX, dotY, 0.058)) return INK;
-    }
-    return WHITE;
+  // Arrows live in the body only, so they never spill into the tail.
+  if (body) {
+    // Upper arrow, pointing right.
+    if (insideBar(x, y, 0.25, 0.66, 0.355, 0.040)) return WHITE;
+    if (insideTriangle(x, y, 0.62, 0.26, 0.62, 0.45, 0.79, 0.355)) return WHITE;
+    // Lower arrow, pointing back the other way.
+    if (insideBar(x, y, 0.34, 0.75, 0.475, 0.040)) return WHITE;
+    if (insideTriangle(x, y, 0.38, 0.38, 0.38, 0.57, 0.21, 0.475)) return WHITE;
   }
 
-  if (x < 1 / 3) return BLUE;
-  if (x < 2 / 3) return YELLOW;
-  return RED;
+  return VIVID;
 }
 
 function render(size) {

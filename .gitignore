@@ -4,3 +4,5 @@ dist/
 .DS_Store
 *.log
 .vscode/
+logo-candidates/
+logo-final/

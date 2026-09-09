@@ -2,19 +2,19 @@
    content script toggles, so the effect can be made invisible without
    undoing the rewrite. */
 html.slang-marks .slang-swap {
-  border-bottom: 1px dashed rgba(206, 17, 38, 0.55);
-  background-image: linear-gradient(rgba(252, 209, 22, 0.22), rgba(252, 209, 22, 0.22));
+  border-bottom: 1px dashed rgba(255, 122, 61, 0.7);
+  background-image: linear-gradient(rgba(255, 122, 61, 0.16), rgba(255, 122, 61, 0.16));
   border-radius: 2px;
   cursor: help;
 }
 
 html.slang-marks .slang-swap:hover {
-  background-image: linear-gradient(rgba(252, 209, 22, 0.45), rgba(252, 209, 22, 0.45));
+  background-image: linear-gradient(rgba(255, 122, 61, 0.3), rgba(255, 122, 61, 0.3));
 }
 
 @media (prefers-color-scheme: dark) {
   html.slang-marks .slang-swap {
-    background-image: linear-gradient(rgba(252, 209, 22, 0.14), rgba(252, 209, 22, 0.14));
-    border-bottom-color: rgba(252, 209, 22, 0.5);
+    background-image: linear-gradient(rgba(255, 122, 61, 0.18), rgba(255, 122, 61, 0.18));
+    border-bottom-color: rgba(255, 122, 61, 0.6);
   }
 }

@@ -5,7 +5,7 @@
  */
 const DEFAULTS = { enabled: true, language: 'ro', strictness: 'normal', showOriginal: true };
 
-const COLOR_ACTIVE = '#CE1126';
+const COLOR_ACTIVE = '#FF7A3D';
 const COLOR_PAUSED = '#6B7280';
 
 chrome.runtime.onInstalled.addListener(function () {

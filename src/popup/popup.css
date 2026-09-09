@@ -4,9 +4,8 @@
   --line: #2b303c;
   --text: #eef1f7;
   --muted: #98a0b3;
-  --yellow: #fcd116;
-  --red: #ce1126;
-  --blue: #3a5cc8;
+  --accent: #ff7a3d;
+  --accent-strong: #ff6a24;
 }
 
 * { box-sizing: border-box; }
@@ -24,11 +23,7 @@ body {
 .head h1 { margin: 0; font-size: 15px; letter-spacing: -0.01em; }
 .sub { margin: 2px 0 0; color: var(--muted); font-size: 11px; }
 
-.flag { display: flex; width: 26px; height: 26px; border-radius: 7px; overflow: hidden; flex: none; }
-.flag i { flex: 1; }
-.flag i:nth-child(1) { background: var(--blue); }
-.flag i:nth-child(2) { background: var(--yellow); }
-.flag i:nth-child(3) { background: var(--red); }
+.mark { width: 26px; height: 26px; flex: none; color: var(--accent); }
 
 .row {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
@@ -48,7 +43,7 @@ body {
   content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px;
   border-radius: 50%; background: #fff; transition: transform .15s ease;
 }
-.switch:checked { background: var(--red); }
+.switch:checked { background: var(--accent); }
 .switch:checked::after { transform: translateX(16px); }
 
 select {
@@ -57,11 +52,11 @@ select {
 }
 
 .pause-row.is-paused {
-  border-color: rgba(252, 209, 22, 0.35);
+  border-color: rgba(255, 122, 61, 0.4);
   background: linear-gradient(var(--card), var(--card)) padding-box,
-    rgba(252, 209, 22, 0.06);
+    rgba(255, 122, 61, 0.07);
 }
-.pause-row.is-paused em { color: var(--yellow); }
+.pause-row.is-paused em { color: var(--accent); }
 
 /* Stacked: the label reads across the full width, the durations sit under it
    as equal-width buttons. */
@@ -78,16 +73,16 @@ select {
 }
 .pause-actions button:hover { background: #313846; border-color: #454d5e; }
 .pause-actions button.resume {
-  background: var(--red); border-color: var(--red); font-weight: 600;
+  background: var(--accent); border-color: var(--accent); color: #241205; font-weight: 650;
 }
-.pause-actions button.resume:hover { background: #e01a30; }
+.pause-actions button.resume:hover { background: var(--accent-strong); border-color: var(--accent-strong); }
 
 .stats {
   margin-top: 12px; padding: 11px; border-radius: 9px;
   background: var(--card); border: 1px solid var(--line);
 }
 .count { display: flex; align-items: baseline; gap: 7px; }
-.count b { font-size: 22px; color: var(--yellow); font-variant-numeric: tabular-nums; }
+.count b { font-size: 22px; color: var(--accent); font-variant-numeric: tabular-nums; }
 .count span { color: var(--muted); font-size: 11.5px; }
 
 .top { list-style: none; margin: 10px 0 0; padding: 0; }
@@ -96,7 +91,7 @@ select {
   padding: 5px 0; border-top: 1px solid var(--line); font-size: 11.5px;
 }
 .top .from { color: var(--muted); text-decoration: line-through; white-space: nowrap; }
-.top .arrow { color: var(--red); }
+.top .arrow { color: var(--accent); }
 .top .to { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .top .n { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
 

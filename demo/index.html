@@ -17,16 +17,12 @@
     margin-bottom: 18px;
   }
   .brand { display: flex; align-items: center; gap: 9px; margin-right: auto; font-weight: 650; }
-  .flag { display: flex; width: 24px; height: 24px; border-radius: 6px; overflow: hidden; }
-  .flag i { flex: 1; }
-  .flag i:nth-child(1) { background: #002b7f; }
-  .flag i:nth-child(2) { background: #fcd116; }
-  .flag i:nth-child(3) { background: #ce1126; }
+  .mark { width: 24px; height: 24px; flex: none; color: #ff7a3d; }
   button, select {
     font: inherit; padding: 6px 12px; border-radius: 8px;
     border: 1px solid #ccd0da; background: #fff; cursor: pointer;
   }
-  button.primary { background: #ce1126; border-color: #ce1126; color: #fff; font-weight: 600; }
+  button.primary { background: #ff7a3d; border-color: #ff7a3d; color: #241205; font-weight: 650; }
   .mail { background: #fff; border-radius: 12px; padding: 24px 26px; box-shadow: 0 1px 3px rgba(20,22,28,.12); }
   .subject { margin: 0 0 4px; font-size: 19px; }
   .meta { color: #6b7280; font-size: 12.5px; margin-bottom: 18px; }
@@ -43,19 +39,30 @@
 
   /* The extension's real stylesheet, inlined so the demo needs no build. */
   html.slang-marks .slang-swap {
-    border-bottom: 1px dashed rgba(206, 17, 38, 0.55);
-    background-image: linear-gradient(rgba(252, 209, 22, 0.22), rgba(252, 209, 22, 0.22));
+    border-bottom: 1px dashed rgba(255, 122, 61, 0.7);
+    background-image: linear-gradient(rgba(255, 122, 61, 0.16), rgba(255, 122, 61, 0.16));
     border-radius: 2px; cursor: help;
   }
   html.slang-marks .slang-swap:hover {
-    background-image: linear-gradient(rgba(252, 209, 22, 0.45), rgba(252, 209, 22, 0.45));
+    background-image: linear-gradient(rgba(255, 122, 61, 0.3), rgba(255, 122, 61, 0.3));
   }
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="bar">
-    <div class="brand"><span class="flag"><i></i><i></i><i></i></span> Slang Translate</div>
+    <div class="brand"><svg class="mark" viewBox="0 0 24 24" aria-hidden="true">
+      <g fill="currentColor">
+        <rect x="0.8" y="1.6" width="22.4" height="15.6" rx="4.64"/>
+        <path d="M5.71 16.12H10.9L5.16 22.58Z"/>
+      </g>
+      <g fill="#fff">
+        <rect x="5.16" y="6.57" width="11.2" height="2.15" rx="1.07"/>
+        <path d="M15.27 5.09v5.12l4.64-2.56z"/>
+        <rect x="7.62" y="9.81" width="11.2" height="2.15" rx="1.07"/>
+        <path d="M8.71 8.32v5.11l-4.64-2.55z"/>
+      </g>
+    </svg> Slang Translate</div>
     <select id="language"></select>
     <select id="strictness">
       <option value="strict">strict</option>
