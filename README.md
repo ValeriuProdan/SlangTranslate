@@ -6,11 +6,9 @@ English — your pick.
 
 > **FYI, as per my last email, I will follow up before EOD.**
 
-**Română:** Ca să știi și tu, cum ziceam, dar se pare că n-ai citit, îți dau io
-un semn... poate până se închide prăvălia.
+**Română:** Auzi ba, citește, bă, mailul, îți dau bip, poate before până pleacă lumea acasă.
 
-**English:** Heads up, since nobody else told you, read the email I already sent
-you, expect me in your inbox again before knocking-off time.
+**English:** Yo, listen up, read the email, mate, I'll nag you later before knocking-off time.
 
 Everything happens locally in the tab. No network calls, no accounts, no
 telemetry — the extension cannot send your mail anywhere because it never talks
@@ -117,7 +115,7 @@ Add it to `phrases.js`, then give it words in every pack:
 { id: 'circle-back', p: ['?(lets|let) ?us circle back', 'circling back ?on ?this'] },
 
 // slang-ro.js
-'circle-back': ['ne auzim noi cândva', 'revenim noi... probabil'],
+'circle-back': ['ne auzim, adică nu', 'vorbim la Paștele cailor'],
 
 // slang-en.js
 'circle-back': ["we'll never speak of this again", "let's pretend we'll talk later"],
@@ -125,7 +123,15 @@ Add it to `phrases.js`, then give it words in every pack:
 
 Several variants per phrase stop repeated corporate tics from reading like a
 find-and-replace. The pick is deterministic, so the same phrase in the same
-email always gets the same joke. A test fails if a pack forgets an id.
+email always gets the same joke — which also means that with two variants you
+cannot be sure *which* one a given phrase gets. Where the wording matters, give
+the phrase a single variant. A test fails if a pack forgets an id.
+
+**The voice matters more than the accuracy.** Write what somebody would
+actually say out loud, not a polite gloss of what the corporate phrase means.
+"FYI" becomes `auzi ba` / `yo, listen up`, not "ca să știi și tu" / "for your
+information". If a replacement reads like a dictionary entry, it is wrong even
+when it is correct.
 
 ### Adding a language
 
