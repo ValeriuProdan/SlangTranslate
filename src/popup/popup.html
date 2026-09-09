@@ -1,52 +1,66 @@
 <!doctype html>
-<html lang="ro">
+<html>
 <head>
   <meta charset="utf-8">
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
   <header class="head">
-    <div class="flag" aria-hidden="true"><i></i><i></i><i></i></div>
+    <div class="flag" id="flag" aria-hidden="true"><i></i><i></i><i></i></div>
     <div>
       <h1>Slang Translate</h1>
-      <p class="sub" id="dict-line">romana &middot; limbaj de cartier</p>
+      <p class="sub" id="dict-line"></p>
     </div>
   </header>
 
   <label class="row switch-row">
     <span>
-      <strong>Traducerea e pornita</strong>
-      <em id="state-hint">mailurile sunt rescrise</em>
+      <strong data-i18n="enabledLabel"></strong>
+      <em id="state-hint"></em>
     </span>
     <input type="checkbox" id="enabled" class="switch">
   </label>
 
   <div class="row">
-    <span><strong>Cat de tolerant la typo-uri</strong>
-      <em>cauta si variante scrise gresit</em></span>
+    <span>
+      <strong data-i18n="languageLabel"></strong>
+      <em data-i18n="languageHint"></em>
+    </span>
+    <select id="language"></select>
+  </div>
+
+  <div class="row">
+    <span>
+      <strong data-i18n="strictnessLabel"></strong>
+      <em data-i18n="strictnessHint"></em>
+    </span>
     <select id="strictness">
-      <option value="strict">strict</option>
-      <option value="normal">normal</option>
-      <option value="loose">lejer</option>
+      <option value="strict" data-i18n="strict"></option>
+      <option value="normal" data-i18n="normal"></option>
+      <option value="loose" data-i18n="loose"></option>
     </select>
   </div>
 
   <label class="row switch-row">
-    <span><strong>Arata originalul</strong>
-      <em>subliniat, cu tooltip la hover</em></span>
+    <span>
+      <strong data-i18n="originalLabel"></strong>
+      <em data-i18n="originalHint"></em>
+    </span>
     <input type="checkbox" id="showOriginal" class="switch">
   </label>
 
   <section class="stats">
-    <div class="count"><b id="count">0</b><span>traduceri pe pagina asta</span></div>
+    <div class="count"><b id="count">0</b><span data-i18n="countSuffix"></span></div>
     <ul id="top" class="top"></ul>
-    <p class="empty" id="empty">Deschide un mail corporatist si revino.</p>
+    <p class="empty" id="empty"></p>
   </section>
 
-  <footer>
-    <span>Totul se intampla local. Nimic nu pleaca nicaieri.</span>
-  </footer>
+  <footer data-i18n="footer"></footer>
 
+  <script src="../data/phrases.js"></script>
+  <script src="../data/slang-ro.js"></script>
+  <script src="../data/slang-en.js"></script>
+  <script src="../data/packs.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

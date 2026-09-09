@@ -7,8 +7,10 @@ const N = require('../src/lib/normalize.js');
 const F = require('../src/lib/fuzzy.js');
 const P = require('../src/lib/pattern.js');
 const M = require('../src/lib/matcher.js');
-const DICT = require('../src/data/dictionary-ro.js');
+const PHRASES = require('../src/data/phrases.js');
+const PACKS = require('../src/data/packs.js');
 
+const DICT = PACKS.build('ro');
 const matcher = M.createMatcher(DICT);
 const failures = [];
 let passed = 0;
@@ -229,26 +231,22 @@ test('character offsets line up with the source text', function () {
 
 // ---------------------------------------------------------------- dictionary
 
-test('every entry has a unique id', function () {
+test('every phrase has a unique id', function () {
   const seen = new Set();
-  DICT.entries.forEach(function (entry) {
+  PHRASES.entries.forEach(function (entry) {
     ok(!seen.has(entry.id), 'duplicate id: ' + entry.id);
     seen.add(entry.id);
   });
 });
 
-test('every entry has patterns and replacements', function () {
-  DICT.entries.forEach(function (entry) {
+test('every phrase has at least one pattern', function () {
+  PHRASES.entries.forEach(function (entry) {
     ok(entry.p && entry.p.length, entry.id + ' has no patterns');
-    ok(entry.ro && entry.ro.length, entry.id + ' has no replacements');
-    entry.ro.forEach(function (text) {
-      ok(typeof text === 'string' && text.trim().length, entry.id + ' has an empty replacement');
-    });
   });
 });
 
-test('every pattern in the dictionary parses', function () {
-  DICT.entries.forEach(function (entry) {
+test('every pattern parses', function () {
+  PHRASES.entries.forEach(function (entry) {
     entry.p.forEach(function (source) {
       try {
         P.parsePattern(source);
@@ -259,9 +257,9 @@ test('every pattern in the dictionary parses', function () {
   });
 });
 
-test('no pattern is claimed by two entries', function () {
+test('no pattern is claimed by two phrases', function () {
   const owner = new Map();
-  DICT.entries.forEach(function (entry) {
+  PHRASES.entries.forEach(function (entry) {
     entry.p.forEach(function (source) {
       const key = source.toLowerCase();
       ok(!owner.has(key), JSON.stringify(source) + ' is in both ' + owner.get(key) + ' and ' + entry.id);
@@ -270,20 +268,90 @@ test('no pattern is claimed by two entries', function () {
   });
 });
 
-test('every entry actually fires on its own patterns', function () {
+test('every pattern actually fires on its own words', function () {
   const broken = [];
-  DICT.entries.forEach(function (entry) {
+  PHRASES.entries.forEach(function (entry) {
     entry.p.forEach(function (source) {
       // Build the plainest sentence the pattern can match: required slots only.
       const probe = P.parsePattern(source).slots
         .filter(function (slot) { return !slot.optional; })
         .map(function (slot) { return slot.alts[0].norm; })
         .join(' ');
-      const matches = matcher.findMatches(probe);
-      if (!matches.length) broken.push(entry.id + ' / ' + JSON.stringify(source) + ' -> no match on ' + JSON.stringify(probe));
+      if (!matcher.findMatches(probe).length) {
+        broken.push(entry.id + ' / ' + JSON.stringify(source) + ' -> no match on ' + JSON.stringify(probe));
+      }
     });
   });
   ok(broken.length === 0, 'unreachable patterns:\n    ' + broken.join('\n    '));
+});
+
+// ---------------------------------------------------------------- packs
+
+test('every language pack covers every phrase', function () {
+  PACKS.list().forEach(function (pack) {
+    const full = PACKS.get(pack.id);
+    const missing = PHRASES.entries
+      .filter(function (entry) {
+        const out = full.out[entry.id];
+        return !out || !out.length;
+      })
+      .map(function (entry) { return entry.id; });
+    ok(missing.length === 0, pack.id + ' is missing: ' + missing.join(', '));
+  });
+});
+
+test('no pack invents ids the phrase list does not have', function () {
+  const known = new Set(PHRASES.entries.map(function (e) { return e.id; }));
+  PACKS.list().forEach(function (pack) {
+    Object.keys(PACKS.get(pack.id).out).forEach(function (id) {
+      ok(known.has(id), pack.id + ' has replacements for unknown phrase ' + id);
+    });
+  });
+});
+
+test('every replacement is a non-empty string', function () {
+  PACKS.list().forEach(function (pack) {
+    const out = PACKS.get(pack.id).out;
+    Object.keys(out).forEach(function (id) {
+      out[id].forEach(function (text) {
+        ok(typeof text === 'string' && text.trim().length, pack.id + '/' + id + ' has an empty replacement');
+      });
+    });
+  });
+});
+
+test('both languages build and match', function () {
+  ['ro', 'en'].forEach(function (id) {
+    const built = PACKS.build(id);
+    const m = M.createMatcher(built);
+    eq(built.entries.length, PHRASES.entries.length, id + ' entry count');
+    ok(m.findMatches('FYI I will follow up before EOD').length >= 2, id + ' should match a corporate sentence');
+  });
+});
+
+test('the English pack rewrites into English', function () {
+  const en = M.createMatcher(PACKS.build('en'));
+  const out = en.translate('Please advise at your earliest convenience.');
+  ok(out.indexOf('Please advise') === -1, 'the corporate phrasing should be gone');
+  ok(/[a-z]/.test(out), 'and replaced with something');
+});
+
+test('the two packs disagree, as they should', function () {
+  const ro = M.createMatcher(PACKS.build('ro')).translate('FYI');
+  const en = M.createMatcher(PACKS.build('en')).translate('FYI');
+  ok(ro !== en, 'same input, different language, different output');
+});
+
+test('an unknown language falls back to the default', function () {
+  eq(PACKS.build('klingon').id, PACKS.DEFAULT_ID);
+});
+
+test('a partial pack drops only the phrases it lacks', function () {
+  // Packs are allowed to be incomplete; build() must skip, not crash.
+  PACKS.register({ id: 'test-partial', label: 'Partial', nativeLabel: 'Partial', out: { fyi: ['x'] } });
+  const built = PACKS.build('test-partial');
+  eq(built.entries.length, 1);
+  eq(built.entries[0].id, 'fyi');
 });
 
 // ---------------------------------------------------------------- report
@@ -297,4 +365,6 @@ if (failures.length) {
   process.exit(1);
 }
 console.log('  ' + passed + ' passed');
-console.log('  dictionary: ' + matcher.entryCount + ' entries, ' + matcher.patternCount + ' patterns\n');
+console.log('  ' + PHRASES.entries.length + ' phrases, ' + matcher.patternCount + ' patterns');
+console.log('  packs: ' + PACKS.list().filter(function (p) { return p.id.indexOf('test-') !== 0; })
+  .map(function (p) { return p.nativeLabel + ' (' + p.coverage + ')'; }).join(', ') + '\n');

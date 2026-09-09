@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Slang Translate",
-  "version": "0.1.0",
-  "description": "Rewrites corporate speak in your inbox as Romanian slang. FYI devine \"ca sa stii si tu\".",
+  "version": "0.2.0",
+  "description": "Rewrites corporate speak in your inbox as slang. Romanian and English.",
   "permissions": [
     "storage"
   ],
@@ -43,7 +43,10 @@
         "src/lib/pattern.js",
         "src/lib/matcher.js",
         "src/lib/dom-rewrite.js",
-        "src/data/dictionary-ro.js",
+        "src/data/phrases.js",
+        "src/data/slang-ro.js",
+        "src/data/slang-en.js",
+        "src/data/packs.js",
         "src/content/content.js"
       ],
       "css": [

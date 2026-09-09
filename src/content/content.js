@@ -2,26 +2,39 @@
  * Extension glue: reads settings, drives the rewriter over the mail UI, and
  * keeps rewriting as the client swaps content in.
  *
- * The actual DOM work lives in src/lib/dom-rewrite.js. Everything here is
- * local to the tab; nothing is ever sent anywhere.
+ * The matching lives in src/lib/, the DOM work in src/lib/dom-rewrite.js.
+ * Everything here is local to the tab; nothing is ever sent anywhere.
  */
 (function () {
   'use strict';
 
-  const DEFAULTS = { enabled: true, strictness: 'normal', showOriginal: true };
-  const matcher = window.SlangMatcher.createMatcher(window.SlangDictionaryRO);
+  const DEFAULTS = {
+    enabled: true,
+    language: window.SlangPacks.DEFAULT_ID,
+    strictness: 'normal',
+    showOriginal: true
+  };
 
   let config = Object.assign({}, DEFAULTS);
+  let matcher = null;
   let rewriter = null;
   let observer = null;
   let scheduled = false;
   const pending = [];
 
+  /** Built lazily, and rebuilt whenever the language changes. */
+  function ensureMatcher() {
+    if (!matcher) {
+      matcher = window.SlangMatcher.createMatcher(window.SlangPacks.build(config.language));
+    }
+    return matcher;
+  }
+
   function ensureRewriter() {
     if (!rewriter) {
       rewriter = window.SlangDomRewrite.createRewriter({
         document: document,
-        matcher: matcher,
+        matcher: ensureMatcher(),
         strictness: config.strictness,
         showOriginal: config.showOriginal
       });
@@ -124,15 +137,25 @@
       if (!(key in DEFAULTS)) return;
       config[key] = changes[key].newValue;
       touched = true;
+      // A different language means a different dictionary entirely.
+      if (key === 'language') {
+        matcher = null;
+        rewriter = null;
+      }
     });
     if (!touched) return;
 
-    // Strictness and marks both change what the page should look like, so the
-    // simplest correct thing is to undo everything and rewrite from scratch.
+    // Language, strictness and marks all change what the page should look
+    // like, so the simplest correct thing is to undo everything and rewrite
+    // from scratch.
     stopObserving();
     if (rewriter) {
       rewriter.undoAll();
       rewriter.setOptions(config);
+    } else {
+      // The rewriter went away with the old language; the spans still know
+      // their originals, so undo needs nothing else.
+      window.SlangDomRewrite.undoAll(document);
     }
     pushCount();
     applyMarks();
@@ -146,7 +169,12 @@
       ok: true,
       count: active.stats.count,
       top: active.topEntries(6),
-      dictionary: { entries: matcher.entryCount, patterns: matcher.patternCount }
+      language: config.language,
+      languages: window.SlangPacks.list(),
+      dictionary: {
+        entries: ensureMatcher().entryCount,
+        patterns: ensureMatcher().patternCount
+      }
     });
     return false;
   });

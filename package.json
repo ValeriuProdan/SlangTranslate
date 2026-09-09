@@ -1,7 +1,7 @@
 {
   "name": "slang-translate",
-  "version": "0.1.0",
-  "description": "Chrome extension that rewrites corporate speak in your inbox as Romanian slang.",
+  "version": "0.2.0",
+  "description": "Chrome extension that rewrites corporate speak in your inbox as slang (Romanian and English).",
   "private": true,
   "scripts": {
     "test": "node test/run.js",

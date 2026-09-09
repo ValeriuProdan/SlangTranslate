@@ -173,7 +173,7 @@
      * same email never reshuffles the joke.
      */
     function pickOutput(entry, original) {
-      const outputs = entry.ro;
+      const outputs = entry.out;
       if (outputs.length === 1) return outputs[0];
       return outputs[fnv1a(entry.id + '|' + N.normalizeWord(original)) % outputs.length];
     }

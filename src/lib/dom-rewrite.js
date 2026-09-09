@@ -32,6 +32,22 @@
     '.' + CLASS
   ].join(',');
 
+  /**
+   * Puts every swapped phrase back, anywhere in the document. Needs no
+   * rewriter instance: the original text rides along on each span, so undo
+   * works even after the language (and matcher) has been thrown away.
+   */
+  function undoAll(doc, scope) {
+    const spans = (scope || doc).querySelectorAll('span.' + CLASS);
+    Array.prototype.forEach.call(spans, function (span) {
+      const parent = span.parentNode;
+      if (!parent) return;
+      parent.replaceChild(doc.createTextNode(span.getAttribute('data-slang-original')), span);
+      parent.normalize();
+    });
+    return spans.length;
+  }
+
   function createRewriter(options) {
     const doc = options.document;
     const matcher = options.matcher;
@@ -140,17 +156,11 @@
     }
 
     /** Puts every swapped phrase back and forgets the stats. */
-    function undoAll(scope) {
-      const spans = (scope || doc).querySelectorAll('span.' + CLASS);
-      Array.prototype.forEach.call(spans, function (span) {
-        const parent = span.parentNode;
-        if (!parent) return;
-        parent.replaceChild(doc.createTextNode(span.getAttribute('data-slang-original')), span);
-        parent.normalize();
-      });
+    function undoAllHere(scope) {
+      const restored = undoAll(doc, scope);
       stats.count = 0;
       stats.byEntry.clear();
-      return spans.length;
+      return restored;
     }
 
     function topEntries(limit) {
@@ -161,7 +171,7 @@
 
     return {
       rewrite: rewrite,
-      undoAll: undoAll,
+      undoAll: undoAllHere,
       setOptions: setOptions,
       topEntries: topEntries,
       stats: stats,
@@ -169,7 +179,7 @@
     };
   }
 
-  const api = { createRewriter: createRewriter, CLASS: CLASS };
+  const api = { createRewriter: createRewriter, undoAll: undoAll, CLASS: CLASS };
 
   root.SlangDomRewrite = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

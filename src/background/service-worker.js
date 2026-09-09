@@ -2,7 +2,7 @@
  * Keeps the toolbar badge in sync with how much corporate speak each tab has
  * absorbed, and seeds defaults on install.
  */
-const DEFAULTS = { enabled: true, strictness: 'normal', showOriginal: true };
+const DEFAULTS = { enabled: true, language: 'ro', strictness: 'normal', showOriginal: true };
 
 chrome.runtime.onInstalled.addListener(function () {
   chrome.storage.sync.get(DEFAULTS, function (stored) {

@@ -56,6 +56,7 @@
 <div class="wrap">
   <div class="bar">
     <div class="brand"><span class="flag"><i></i><i></i><i></i></span> Slang Translate</div>
+    <select id="language"></select>
     <select id="strictness">
       <option value="strict">strict</option>
       <option value="normal" selected>normal</option>
@@ -93,10 +94,13 @@
 <script src="../src/lib/pattern.js"></script>
 <script src="../src/lib/matcher.js"></script>
 <script src="../src/lib/dom-rewrite.js"></script>
-<script src="../src/data/dictionary-ro.js"></script>
+<script src="../src/data/phrases.js"></script>
+<script src="../src/data/slang-ro.js"></script>
+<script src="../src/data/slang-en.js"></script>
+<script src="../src/data/packs.js"></script>
 <script>
   // Same modules the extension loads; only the chrome.* glue is missing.
-  const matcher = SlangMatcher.createMatcher(SlangDictionaryRO);
+  const language = document.getElementById('language');
   const mail = document.getElementById('mail');
   const countEl = document.getElementById('count');
   const toggle = document.getElementById('toggle');
@@ -104,7 +108,22 @@
   let rewriter = null;
   let on = false;
 
+  // The demo chrome speaks whichever language it is translating into.
+  const LABELS = {
+    ro: { translate: 'Tradu', revert: 'Inapoi la engleza', count: ' traduceri' },
+    en: { translate: 'Translate', revert: 'Back to corporate', count: ' swaps' }
+  };
+  const labels = function () { return LABELS[language.value] || LABELS.ro; };
+
+  SlangPacks.list().forEach(function (pack) {
+    const option = document.createElement('option');
+    option.value = pack.id;
+    option.textContent = pack.nativeLabel;
+    language.append(option);
+  });
+
   function apply() {
+    const matcher = SlangMatcher.createMatcher(SlangPacks.build(language.value));
     rewriter = SlangDomRewrite.createRewriter({
       document: document,
       matcher: matcher,
@@ -113,21 +132,26 @@
     });
     document.documentElement.classList.add('slang-marks');
     rewriter.rewrite(mail);
-    countEl.textContent = rewriter.stats.count + ' traduceri';
-    toggle.textContent = 'Inapoi la engleza';
+    countEl.textContent = rewriter.stats.count + labels().count;
+    toggle.textContent = labels().revert;
     on = true;
   }
 
   function undo() {
     if (rewriter) rewriter.undoAll();
-    countEl.textContent = '0 traduceri';
-    toggle.textContent = 'Tradu';
+    countEl.textContent = '0' + labels().count;
+    toggle.textContent = labels().translate;
     on = false;
   }
 
   toggle.addEventListener('click', function () { on ? undo() : apply(); });
   strictness.addEventListener('change', function () { if (on) { undo(); apply(); } });
+  language.addEventListener('change', function () { on ? (undo(), apply()) : undo(); });
 
+  // ?lang=en preselects the English pack; ?auto translates on load.
+  const wanted = new URLSearchParams(location.search).get('lang');
+  if (wanted) language.value = wanted;
+  undo();
   if (location.search.indexOf('auto') !== -1) apply();
 </script>
 </body>
