@@ -49,6 +49,19 @@
     return w;
   }
 
+  /**
+   * Which English form a word is in, judged from its ending. Used to pick a
+   * matching form of the replacement: "escalating" wants "telling the boss",
+   * not "tell the boss".
+   */
+  function inflection(word) {
+    const w = word;
+    if (w.length > 4 && w.endsWith('ing')) return 'ing';
+    if (w.length > 3 && w.endsWith('ed')) return 'ed';
+    if (w.length > 3 && w.endsWith('s') && !w.endsWith('ss') && !w.endsWith('us')) return 's';
+    return 'base';
+  }
+
   function makeToken(raw, start, text, previous) {
     const norm = normalizeWord(raw);
     return {
@@ -114,6 +127,7 @@
     tokenize: tokenize,
     applyCase: applyCase,
     isSentenceStart: isSentenceStart,
+    inflection: inflection,
     looksLikeMachineText: looksLikeMachineText,
     HARD_BREAK_RE: HARD_BREAK_RE
   };

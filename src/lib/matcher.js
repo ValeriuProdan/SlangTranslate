@@ -26,6 +26,9 @@
     return PRESETS[strictness] || PRESETS.normal;
   }
 
+  // For slots marked "=": the word itself or nothing.
+  const EXACT = { exact: true, maxTypos: 0, minTokenScore: 1, stemBridge: false };
+
   /**
    * Pick one of several variants deterministically, so re-rendering the same
    * email never reshuffles the joke.
@@ -41,12 +44,13 @@
    * language can be decided after the phrases are located rather than before.
    * Casing stays here so there is one place that knows about it.
    *
-   * @param {function(string, string): string} replace entry id + original text
+   * @param {function(string, string, string): string} replace
+   *        entry id, original text, and the form ('base' | 'ing' | 'ed' | 's')
    */
   function relabel(text, matches, replace) {
     const kept = [];
     matches.forEach(function (match) {
-      const raw = replace(match.entry.id, match.original);
+      const raw = replace(match.entry.id, match.original, match.form);
       // A pack with no words for this phrase leaves the text alone rather
       // than falling back to another language's joke.
       if (!raw) return;
@@ -54,6 +58,17 @@
       kept.push(match);
     });
     return kept;
+  }
+
+  /**
+   * A pack value is either a plain list of variants, or an object of lists
+   * keyed by form -- { base, ing, ed, s } -- for entries that have to agree
+   * with the sentence. Missing forms fall back to base.
+   */
+  function formOf(value, form) {
+    if (!value) return [];
+    if (Array.isArray(value)) return value;
+    return value[form] || value.base || [];
   }
 
   function fnv1a(str) {
@@ -95,7 +110,7 @@
       const slots = pattern.slots;
 
       function walk(si, ti) {
-        if (si === slots.length) return { ti: ti, sum: 0, weight: 0, consumed: 0 };
+        if (si === slots.length) return { ti: ti, sum: 0, weight: 0, consumed: 0, peeked: 0, form: null };
         const slot = slots[si];
         let best = null;
 
@@ -104,8 +119,9 @@
         if (canConsume) {
           let bestScore = 0;
           let bestWeight = 0;
+          const slotCfg = slot.exact ? EXACT : cfg;
           for (let a = 0; a < slot.alts.length; a++) {
-            const score = F.tokenScore(tokens[ti], slot.alts[a], cfg);
+            const score = F.tokenScore(tokens[ti], slot.alts[a], slotCfg);
             if (score > bestScore) {
               bestScore = score;
               bestWeight = Math.max(2, slot.alts[a].norm.length);
@@ -118,7 +134,11 @@
                 ti: rest.ti,
                 sum: rest.sum + bestScore * bestWeight,
                 weight: rest.weight + bestWeight,
-                consumed: rest.consumed + 1
+                // A lookahead vouches for the match but is not part of it.
+                consumed: rest.consumed + (slot.peek ? 0 : 1),
+                peeked: rest.peeked + (slot.peek ? 1 : 0),
+                // The starred slot's surface form decides the replacement's.
+                form: slot.inflects ? N.inflection(tokens[ti].norm) : rest.form
               };
             }
           }
@@ -140,15 +160,22 @@
       const floor = result.consumed === 1 ? cfg.minSingleScore : cfg.minPhraseScore;
       if (score < floor) return null;
 
-      return { endToken: result.ti, consumed: result.consumed, score: score };
+      return {
+        endToken: result.ti - result.peeked,
+        consumed: result.consumed,
+        score: score,
+        form: result.form || 'base'
+      };
     }
 
-    function bestAt(tokens, i, cfg) {
+    function bestAt(tokens, i, cfg, cfgSingle) {
       const candidates = index.get(tokens[i].norm.charAt(0));
       if (!candidates) return null;
       let best = null;
       for (let c = 0; c < candidates.length; c++) {
-        const hit = matchPattern(tokens, i, candidates[c].pattern, cfg);
+        const pattern = candidates[c].pattern;
+        // A one-word pattern gets the stricter rules: no stem bridging.
+        const hit = matchPattern(tokens, i, pattern, pattern.slots.length === 1 ? cfgSingle : cfg);
         if (!hit) continue;
         if (!best || hit.consumed > best.consumed ||
             (hit.consumed === best.consumed && hit.score > best.score)) {
@@ -156,6 +183,7 @@
             endToken: hit.endToken,
             consumed: hit.consumed,
             score: hit.score,
+            form: hit.form,
             entry: candidates[c].entry,
             pattern: candidates[c].pattern
           };
@@ -171,12 +199,13 @@
     function findMatches(text, options) {
       const opts = options || {};
       const cfg = configFor(opts.strictness);
+      const cfgSingle = Object.assign({}, cfg, { stemBridge: false });
       const tokens = N.tokenize(text);
       const matches = [];
 
       let i = 0;
       while (i < tokens.length) {
-        const best = bestAt(tokens, i, cfg);
+        const best = bestAt(tokens, i, cfg, cfgSingle);
         if (!best) {
           i++;
           continue;
@@ -188,9 +217,10 @@
           start: from,
           end: to,
           original: original,
-          replacement: N.applyCase(original, pickOutput(best.entry, original),
+          replacement: N.applyCase(original, pickOutput(best.entry, original, best.form),
             N.isSentenceStart(text, from)),
           entry: best.entry,
+          form: best.form,
           score: best.score
         });
         i = best.endToken;
@@ -198,8 +228,8 @@
       return matches;
     }
 
-    function pickOutput(entry, original) {
-      return pickVariant(entry.out, entry.id + '|' + N.normalizeWord(original));
+    function pickOutput(entry, original, form) {
+      return pickVariant(formOf(entry.out, form), entry.id + '|' + N.normalizeWord(original));
     }
 
     /** Convenience for tests and for the popup preview. */
@@ -226,6 +256,7 @@
   const api = {
     createMatcher: createMatcher,
     pickVariant: pickVariant,
+    formOf: formOf,
     relabel: relabel,
     PRESETS: PRESETS,
     configFor: configFor

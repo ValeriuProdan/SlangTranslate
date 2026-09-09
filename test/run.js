@@ -168,8 +168,17 @@ test('dotted acronyms are translated', function () {
   matchesEntry('F.Y.I. the deploy is late', 'fyi');
 });
 
-test('the follow-up promise is translated', function () {
-  matchesEntry('I will follow up tomorrow', 'follow-up');
+test('the follow-up promise is translated as a promise', function () {
+  // With a subject and a modal it is a whole clause, and gets a clause back.
+  matchesEntry('I will follow up tomorrow', 'will-follow-up');
+});
+
+test('a bare follow-up keeps the sentence\'s own subject', function () {
+  // Without them it is just a verb, so the replacement is a verb that keeps
+  // whatever subject and modal the sentence already had.
+  matchesEntry('Please follow up with them', 'follow-up');
+  const out = matcher.translate('Please follow up with them');
+  ok(out.indexOf('Please ') === 0, 'the sentence keeps its opening: ' + out);
 });
 
 test('optional slots cover the shorter phrasing', function () {
@@ -177,7 +186,7 @@ test('optional slots cover the shorter phrasing', function () {
 });
 
 test('typos still match', function () {
-  matchesEntry('I will folow up tomorrow', 'follow-up');
+  matchesEntry('I will folow up tomorrow', 'will-follow-up');
   matchesEntry('we have no bandwith left', 'bandwidth');
   matchesEntry('as per my lst emial', 'per-my-last-email');
 });
@@ -209,9 +218,11 @@ test('a blank line does stop a match', function () {
 });
 
 test('overlapping matches resolve to the longest one', function () {
-  const matches = matcher.findMatches('let us take this offline');
-  eq(matches.length, 1, 'one match, not "let us" plus "offline"');
-  eq(matches[0].original, 'let us take this offline');
+  // "circle back on this" is a verb; "let us circle back on this" is the
+  // whole promise. Both fit at this position, and the longer one wins.
+  const matches = matcher.findMatches('let us circle back on this');
+  eq(matches.length, 1, 'one match, not "circle back" on its own');
+  eq(matches[0].original, 'let us circle back on this');
 });
 
 test('variant choice is deterministic', function () {
@@ -292,9 +303,8 @@ test('every pattern actually fires on its own words', function () {
 // ---------------------------------------------------------------- packs
 
 function uncovered(packId, phrases) {
-  const out = PACKS.get(packId).out;
   return phrases
-    .filter(function (entry) { return !out[entry.id] || !out[entry.id].length; })
+    .filter(function (entry) { return !PACKS.covers(packId, entry.id); })
     .map(function (entry) { return entry.id; });
 }
 
@@ -338,8 +348,14 @@ test('every replacement is a non-empty string', function () {
   PACKS.list().forEach(function (pack) {
     const out = PACKS.get(pack.id).out;
     Object.keys(out).forEach(function (id) {
-      out[id].forEach(function (text) {
-        ok(typeof text === 'string' && text.trim().length, pack.id + '/' + id + ' has an empty replacement');
+      const value = out[id];
+      const lists = Array.isArray(value) ? { base: value } : value;
+      ok(lists.base && lists.base.length, pack.id + '/' + id + ' needs a base form');
+      Object.keys(lists).forEach(function (form) {
+        ok(['base', 'ing', 'ed', 's'].indexOf(form) !== -1, pack.id + '/' + id + ' has unknown form ' + form);
+        lists[form].forEach(function (text) {
+          ok(typeof text === 'string' && text.trim().length, pack.id + '/' + id + '.' + form + ' has an empty replacement');
+        });
       });
     });
   });
@@ -619,6 +635,120 @@ test('an English-source phrase still works in both packs', function () {
     const out = M.createMatcher(PACKS.build(id)).translate('FYI');
     ok(out !== 'FYI', id + ' should have rewritten FYI');
   });
+});
+
+// ---------------------------------------------------------------- fit
+
+const en = M.createMatcher(PACKS.build('en'));
+
+test('a word that merely resembles a corporate verb is left alone', function () {
+  // "ideas" is one stem-edit from "ideating"; it is also a different word.
+  eq(en.translate('We are exploring various ideas and are looking for feedback.'),
+     'We are exploring various ideas and are looking for feedback.');
+});
+
+test('the replacement takes the form of the word it replaces', function () {
+  const forms = { 'escalate': 'base', 'escalating': 'ing', 'escalated': 'ed', 'escalates': 's' };
+  Object.keys(forms).forEach(function (word) {
+    const match = en.findMatches('they ' + word + ' everything')[0];
+    ok(match, word + ' should match');
+    eq(match.form, forms[word], word);
+  });
+  eq(en.translate('She is escalating this'), 'She is telling the boss this');
+  eq(en.translate('He escalates everything'), 'He tells the boss everything');
+});
+
+test('an exact-word slot ignores typos and stems', function () {
+  eq(en.translate('We need to move forward.'), 'We need to move forward.', 'the verb is not the adverb');
+  ok(en.translate('Moving forward, we ship weekly.').indexOf('From now on') === 0, 'the adverb still is');
+});
+
+test('a verb replacement keeps the sentence\'s subject and modal', function () {
+  ok(/^we should (shelve it|kick it down the road)$/.test(en.translate('we should park this')),
+     'the sentence keeps "we should": ' + en.translate('we should park this'));
+  eq(en.translate('we should sync up'), 'we should have a quick word');
+  eq(en.translate('this adds value'), 'this is useful');
+});
+
+test('a replacement that precedes an object still precedes it', function () {
+  eq(en.translate('Please find attached the report.'), "Here's the report.");
+  eq(en.translate('looping in Dana'), 'roping in Dana');
+});
+
+test('a form that a pack does not spell out falls back to base', function () {
+  eq(M.formOf({ base: ['b'], ing: ['i'] }, 'ed').join(), 'b');
+  eq(M.formOf(['plain'], 'ing').join(), 'plain', 'a plain list is every form');
+});
+
+test('a pattern may star at most one slot', function () {
+  PHRASES.entries.forEach(function (entry) {
+    entry.p.forEach(function (source) {
+      const stars = P.parsePattern(source).slots.filter(function (s) { return s.inflects; }).length;
+      ok(stars <= 1, entry.id + ' / ' + source + ' stars ' + stars + ' slots');
+    });
+  });
+});
+
+test('every starred English entry spells out its forms', function () {
+  // If the pattern says the word inflects, the pack had better be able to.
+  const out = PACKS.get('en').out;
+  PHRASES.entries.forEach(function (entry) {
+    const starred = entry.p.some(function (source) {
+      return P.parsePattern(source).slots.some(function (s) { return s.inflects; });
+    });
+    if (!starred) return;
+    const value = out[entry.id];
+    ok(value && !Array.isArray(value), entry.id + ' is starred but has no forms in English');
+    ok(value.base && value.base.length, entry.id + ' needs a base form');
+    // A noun only needs a plural; a verb that has -ing must have the rest.
+    ok(value.s && value.s.length, entry.id + ' needs an s form (plural or third person)');
+    if (value.ing) {
+      ok(value.ed && value.ed.length, entry.id + ' has -ing but no -ed');
+    }
+  });
+});
+
+test('a lookahead slot vouches for the match but stays in the text', function () {
+  eq(en.translate('We should leverage our network.'), 'We should use our network.');
+  eq(en.translate('He has a lot of leverage with the landlord.'), 'He has a lot of leverage with the landlord.',
+    'the noun sense has no determiner after it, so it is left alone');
+  const match = en.findMatches('leverage the data')[0];
+  eq(match.original, 'leverage', 'only the verb is inside the match');
+});
+
+test('lookahead slots must come last', function () {
+  let threw = false;
+  try { P.parsePattern('>the *leverage'); } catch (err) { threw = true; }
+  ok(threw, 'a leading lookahead should be rejected');
+  threw = false;
+  try { P.parsePattern('>the >thing'); } catch (err) { threw = true; }
+  ok(threw, 'a pattern of only lookaheads matches nothing and should be rejected');
+});
+
+test('countable nouns come out in the right number', function () {
+  eq(en.translate('We have two blockers.'), 'We have two things holding everything up.');
+  eq(en.translate('We have a blocker.'), 'We have a thing holding everything up.');
+  eq(en.translate('the stakeholders agreed'), 'the people with opinions agreed');
+});
+
+test('everyday prose is left alone', function () {
+  [
+    'We are exploring various ideas for the summer.',
+    'She sprints the last mile which I think is madness.',
+    'The retro camera you lent me takes lovely pictures.',
+    'I aligned the shelves in the garage.',
+    'Natural resources in the region are mostly timber.',
+    'The capacity of the hall is about three hundred people.',
+    'I read your draft and had a few thoughts about the ending.',
+    'He bumped into her at the shop.',
+    'Sync your phone before you leave.'
+  ].forEach(function (text) { eq(en.translate(text), text); });
+  const ro = M.createMatcher(PACKS.build('ro'));
+  [
+    'Aparatul foto retro face poze superbe.',
+    'Am aliniat rafturile din garaj.',
+    'Resursele naturale din zona sunt lemn.'
+  ].forEach(function (text) { eq(ro.translate(text), text); });
 });
 
 // ---------------------------------------------------------------- report

@@ -47,8 +47,7 @@
         label: pack.label,
         nativeLabel: pack.nativeLabel,
         coverage: PHRASES.entries.filter(function (phrase) {
-          const out = pack.out[phrase.id];
-          return out && out.length;
+          return covers(pack.id, phrase.id);
         }).length
       };
     });
@@ -64,9 +63,8 @@
     const pack = get(id);
     const entries = [];
     PHRASES.entries.forEach(function (phrase) {
-      const out = pack.out[phrase.id];
-      if (!out || !out.length) return;
-      entries.push({ id: phrase.id, p: phrase.p, src: phrase.src, out: out });
+      if (!covers(pack.id, phrase.id)) return;
+      entries.push({ id: phrase.id, p: phrase.p, src: phrase.src, out: pack.out[phrase.id] });
     });
     return {
       id: pack.id,
@@ -81,21 +79,38 @@
    * deterministic way build() would have chosen it. This is what lets the
    * language be decided per sentence instead of per page.
    */
-  function replacementFor(packId, entryId, original) {
+  /**
+   * @param {number} [occurrence] how many times this phrase has already been
+   *        rewritten on the page. When given, variants rotate in page order --
+   *        so two "park this" a sentence apart get two different jokes, and a
+   *        re-render walks the page in the same order and lands on the same
+   *        ones. Without it the pick hashes the text, which is stable but lets
+   *        identical phrases collide.
+   */
+  function replacementFor(packId, entryId, original, form, occurrence) {
     // Resolved on use, not on load: the popup loads the packs without the
     // matcher and never asks for a replacement.
     const M = root.SlangMatcher || (req ? req('../lib/matcher.js') : null);
     if (!M) return '';
-    const pack = get(packId);
-    const outputs = pack.out[entryId];
-    if (!outputs || !outputs.length) return '';
+    const outputs = M.formOf(get(packId).out[entryId], form || 'base');
+    if (!outputs.length) return '';
+    if (typeof occurrence === 'number') return outputs[occurrence % outputs.length];
     return M.pickVariant(outputs, entryId + '|' + String(original).toLowerCase());
+  }
+
+  /** Does this pack have any words at all for the phrase? */
+  function covers(packId, entryId) {
+    const value = get(packId).out[entryId];
+    if (!value) return false;
+    if (Array.isArray(value)) return value.length > 0;
+    return !!(value.base && value.base.length);
   }
 
   const api = {
     phrases: PHRASES,
     build: build,
     replacementFor: replacementFor,
+    covers: covers,
     AUTO: AUTO,
     get: get,
     list: list,

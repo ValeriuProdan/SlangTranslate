@@ -121,6 +121,8 @@
     const detector = options.detect || null;
     let pageLanguage;
     const stats = { count: 0, byEntry: new Map(), byLanguage: {} };
+    // Per-entry occurrence counters, so variants rotate across the page.
+    let seen = {};
 
     function setOptions(next) {
       if (next.strictness) config.strictness = next.strictness;
@@ -244,8 +246,10 @@
 
       const language = languageFor(node, text, matches);
       if (packs) {
-        matches = SlangMatcherRef().relabel(text, matches, function (entryId, original) {
-          return packs.replacementFor(language, entryId, original);
+        matches = SlangMatcherRef().relabel(text, matches, function (entryId, original, form) {
+          const occurrence = seen[entryId] || 0;
+          seen[entryId] = occurrence + 1;
+          return packs.replacementFor(language, entryId, original, form, occurrence);
         });
         if (!matches.length) return 0;
       }
@@ -311,6 +315,7 @@
       stats.count = 0;
       stats.byEntry.clear();
       stats.byLanguage = {};
+      seen = {};
       pageLanguage = undefined;
       return restored;
     }

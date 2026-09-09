@@ -61,6 +61,7 @@
    */
   function tokenScore(a, b, cfg) {
     if (a.norm === b.norm) return 1;
+    if (cfg.exact) return 0;
     if (a.stem.length >= 3 && a.stem === b.stem) return 0.93;
 
     const maxLen = Math.max(a.norm.length, b.norm.length);
@@ -68,13 +69,26 @@
     if (budget === 0) return 0;
 
     let d = editDistance(a.norm, b.norm, budget);
-    if (d > budget && (a.stem !== a.norm || b.stem !== b.norm)) {
-      // "moving" vs "move" is 3 edits raw but 1 between stems.
-      d = Math.min(d, editDistance(a.stem, b.stem, budget));
+    let over = maxLen;
+
+    // "moving" vs "move" is 3 edits raw but 1 between stems. Bridging stems
+    // like that is only safe inside a multi-word phrase, where the other
+    // words vouch for the match: on its own, "ideas" is one stem-edit from
+    // "ideating" and simply a different word.
+    if (d > budget && cfg.stemBridge !== false && (a.stem !== a.norm || b.stem !== b.norm)) {
+      const stemLen = Math.max(a.stem.length, b.stem.length);
+      const stemBudget = Math.min(cfg.maxTypos, budgetFor(stemLen));
+      const ds = editDistance(a.stem, b.stem, stemBudget);
+      if (ds <= stemBudget && ds < d) {
+        d = ds;
+        // Score against the stems that were actually compared, not the
+        // longer words -- otherwise one edit in "idea" reads as 1/8.
+        over = stemLen;
+      }
     }
     if (d > budget) return 0;
 
-    const score = 1 - d / maxLen;
+    const score = 1 - d / over;
     return score >= cfg.minTokenScore ? score : 0;
   }
 

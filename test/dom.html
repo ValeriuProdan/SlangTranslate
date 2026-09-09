@@ -20,6 +20,7 @@
   <p id="p-en">Hi team, just checking in on the action items before EOD. FYI, we are late.</p>
   <p id="p-ro">Salut, hai sa dam un sync maine ca avem deadline la task-urile astea. FYI, am intarziat.</p>
   <p id="p-corp">Ramanem la dispozitia dumneavoastra pentru orice detalii. Cu stima.</p>
+  <p id="p-twice">Let us park this for now. Later we can park this again.</p>
 </div>
 <pre id="results"></pre>
 
@@ -199,6 +200,12 @@
     langsIn('p-corp').forEach(function (lang) { eq(lang, 'ro'); });
     eq(document.getElementById('p-corp').textContent.indexOf('dispozitia'), -1,
       'the formula should be gone');
+  });
+
+  test('the same phrase twice on a page gets two different jokes', function () {
+    const texts = swapsIn('p-twice').map(function (span) { return span.textContent; });
+    eq(texts.length, 2, 'both occurrences should be rewritten');
+    ok(texts[0] !== texts[1], 'variants should rotate, not repeat: ' + texts.join(' / '));
   });
 
   test('the stats know which language went where', function () {

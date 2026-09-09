@@ -5,6 +5,19 @@
  *   "?just checking in"         leading "?" marks an OPTIONAL token
  *   "(lets|let us) sync"        parentheses give ALTERNATIVES for one slot
  *   "?(i|we) ?(will|ll) follow up"
+ *   "*escalate"                 leading "*" marks the INFLECTING slot: the
+ *                               replacement's form follows this word, so
+ *                               "escalating" gets the "-ing" replacement
+ *   "=moving forward"           leading "=" demands this EXACT word: no typo
+ *                               tolerance, no stemming, so the adverb
+ *                               "moving forward" never catches the verb
+ *                               "move forward"
+ *   "*leverage >(our|the)"      leading ">" is a LOOKAHEAD: the word must be
+ *                               there for the match to count, but it is left
+ *                               in the text -- "leverage our network" becomes
+ *                               "use our network", and the noun in "a lot of
+ *                               leverage" is never touched. Lookaheads must
+ *                               come last.
  *
  * One line of DSL therefore covers "I will follow up", "we'll follow up",
  * "follow up" and "I follow-up" without listing them by hand.
@@ -19,9 +32,24 @@
 
   function parseSlot(part) {
     let optional = false;
+    let inflects = false;
     let body = part;
     if (body.charAt(0) === '?') {
       optional = true;
+      body = body.slice(1);
+    }
+    if (body.charAt(0) === '*') {
+      inflects = true;
+      body = body.slice(1);
+    }
+    let exact = false;
+    if (body.charAt(0) === '=') {
+      exact = true;
+      body = body.slice(1);
+    }
+    let peek = false;
+    if (body.charAt(0) === '>') {
+      peek = true;
       body = body.slice(1);
     }
     // Alternatives are one token each; a space inside the parentheses
@@ -43,7 +71,7 @@
     }).filter(function (alt) {
       return alt.norm.length > 0;
     });
-    return { optional: optional, alts: alts };
+    return { optional: optional, inflects: inflects, exact: exact, peek: peek, alts: alts };
   }
 
   /**
@@ -56,8 +84,14 @@
     });
     if (!slots.length) throw new Error('Empty pattern: ' + source);
 
-    const required = slots.filter(function (s) { return !s.optional; }).length;
+    const required = slots.filter(function (s) { return !s.optional && !s.peek; }).length;
     if (required === 0) throw new Error('Pattern needs at least one required token: ' + source);
+
+    // A lookahead is context, not content, so it can only sit at the end.
+    const firstPeek = slots.findIndex(function (s) { return s.peek; });
+    if (firstPeek !== -1 && slots.slice(firstPeek).some(function (s) { return !s.peek; })) {
+      throw new Error('Lookahead slots (">") must come last: ' + source);
+    }
 
     return {
       source: source,

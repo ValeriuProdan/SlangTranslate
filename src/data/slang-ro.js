@@ -3,13 +3,18 @@
  *
  * Two rules, in this order:
  *
- * 1. Keep the grammar. A replacement has to slot into the sentence where the
- *    original stood, so it must be the same kind of phrase. "OOO" is a state
- *    you can be in -- "I'll be OOO next week" -- so it becomes "tolanit la
- *    soare", not "sunt plecat", which is a whole clause and would leave the
- *    sentence in pieces.
- * 2. Then be funny. Write what somebody would say out loud, not a polite
- *    gloss: "auzi ba", never "ca sa stii si tu".
+ * 1. Keep the grammar. A replacement is dropped into the sentence where the
+ *    original stood, so it must be the same kind of phrase and fit what comes
+ *    before and after it. "OOO" is a state ("I'll be OOO next week"), so it is
+ *    "tolanit la soare", not the clause "sunt plecat". Verbs keep the sentence's
+ *    own subject: "follow up" is "bip" so that "trebuie sa fac follow up" still
+ *    reads.
+ * 2. Then be funny. Write what somebody would say out loud, not a polite gloss:
+ *    "auzi ba", never "ca sa stii si tu".
+ *
+ * Values are plain lists here. English inflection ("escalating") does not
+ * reach Romanian text, so the { base, ing, ed, s } form used by slang-en.js is
+ * not needed.
  *
  * This pack also covers Romanian corporate speak, which the English pack has
  * no reason to.
@@ -24,12 +29,14 @@
     out: {
     // ---- Clasicele -----------------------------------------------------
     'fyi':                    ['auzi ba'],
-    'follow-up':              ['te sun io, dacă-mi arde', 'îți dau bip, poate'],
-    'circle-back':            ['ne auzim, adică nu', 'vorbim la Paștele cailor'],
-    'touch-base':             ['dăm un bip', 'ne vedem la o bere'],
+    'follow-up':              ['bip'],
+    'will-follow-up':         ['te sun io, dacă-mi arde', 'îți dau bip, poate'],
+    'circle-back':            ['revenim, adică nu'],
+    'circle-back-promise':    ['ne auzim, adică nu', 'vorbim la Paștele cailor'],
+    'touch-base':             ['dăm un bip'],
     'per-my-last-email':      ['citește, bă, mailul', 'ți-am scris, deschide ochii'],
     'please-advise':          ['zi ceva, bă', 'ai amuțit?'],
-    'moving-forward':         ['de-acu-ncolo', 'gata, altă viață'],
+    'moving-forward':         ['de-acu-ncolo'],
     'earliest-convenience':   ['când te-o tăia capul', 'când oi avea chef'],
     'asap':                   ['ieri, bă', 'acu, că ard toate'],
     'eod':                    ['până diseară', 'până pleacă lumea acasă'],
@@ -47,9 +54,9 @@
     'thanks-patience':        ['mersi că înghiți'],
     'regards':                ['pa', 'te pup', 'salut și la revedere'],
     'looking-forward':        ['aștept până la Paștele cailor', 'aștept, fără speranțe'],
-    'happy-to-help':          ['n-am ce face, te ajut', 'cu drag, chipurile'],
+    'happy-to-help':          ['obligat să ajut'],
     'hope-helps':             ['sper că-ți folosește la ceva'],
-    'find-attached':          ['ți-am pus fișieru acolo', 'uite-l, deschide-l'],
+    'find-attached':          ['uite'],
     'as-discussed':           ['cum am zis', 'cum ziceam la telefon'],
     'as-you-know':            ['știi tu bine'],
     'per-usual':              ['ca de obicei'],
@@ -59,9 +66,9 @@
     'thoughts':               ['părerea ta'],
     'keep-posted':            ['zi-mi ce mai e', 'ține-mă la curent, că mor'],
     'in-the-loop':            ['la curent'],
-    'loop-in':                ['îl bag și pe el', 'îi dau și lui bip'],
+    'loop-in':                ['bag în horă și pe'],
     'ping-me':                ['dă-mi bip', 'sună, scrie, ceva'],
-    'reach-out':              ['dau io un semn', 'te caut io'],
+    'reach-out':              ['dau un semn'],
     'heads-up':               ['ia aminte', 'te-am prevenit, să nu zici'],
     'flagging':               ['trag un semnal', 'atenție aici'],
     'bear-with-me':           ['stai bre un pic'],
@@ -72,69 +79,80 @@
 
     // ---- Sedinte si sincronizari ---------------------------------------
     'sync':                   ['o vorbă la cafea', 'cinci minute (o oră)'],
+    'sync-up':                ['dăm o vorbă'],
+    'lets-sync':              ['hai să dăm o vorbă', 'hai la o cafea'],
     'lets-connect':           ['hai să dăm o vorbă', 'hai să ne auzim'],
+    'hop-on-call':            ['dăm o vorbă'],
     'one-on-one':             ['o vorbă în doi'],
     'standup':                ['raportul de dimineață'],
     'retro':                  ['ședința de plâns'],
     'all-hands':              ['adunarea'],
     'all-hands-deck':         ['toată lumea la treabă'],
-    'take-offline':           ['vorbim între patru ochi', 'vorbim noi separat'],
+    'take-offline':           ['vorbim între patru ochi'],
     'park-it':                ['băgăm la sertar', 'lăsăm pe altă dată'],
     'cadence':                ['ritmul întâlnirilor'],
     'touchpoint':             ['o vorbă, un bip'],
-    'align':                  ['hai să ne-nțelegem', 'batem palma'],
+    'align':                  ['ne punem de acord'],
+    'lets-align':             ['hai să ne-nțelegem'],
     'alignment':              ['înțelegere'],
-    'same-page':              ['ne-am înțeles', 'vorbim aceeași limbă'],
-    'level-set':              ['nu-ți face speranțe', 'să ne lămurim de la-nceput'],
-    'buy-in':                 ['să zică și șefii da', 'să fie toți de acord'],
+    'same-page':              ['pe aceeași lungime de undă'],
+    'level-set':              ['să nu-ți faci speranțe'],
+    'buy-in':                 ['acordul șefilor'],
+    'reach-consensus':        ['ne punem de acord'],
 
     // ---- Vorbe mari, continut zero -------------------------------------
     'synergy':                ['magie corporatistă', 'chestii care merg împreună'],
-    'leverage':               ['ne folosim de', 'punem la treabă'],
+    'leverage':               ['folosim'],
     'utilize':                ['folosim'],
-    'facilitate':             ['ajutăm'],
+    'facilitate':             ['ajutăm cu'],
     'operationalize':         ['băgăm în practică'],
     'ideate':                 ['ne gândim la ceva'],
     'ideation':               ['ședință de idei trăsnite'],
-    'deep-dive':              ['băgăm nasu mai adânc', 'scormonim un pic'],
-    'drill-down':             ['hai mai la fund', 'intrăm în amănunte'],
+    'deep-dive':              ['o săpătură serioasă'],
+    'dive-deep':              ['băgăm nasu mai adânc'],
+    'drill-down':             ['intrăm în amănunte'],
     'low-hanging':            ['ce se ia ușor', 'ce pică singur din pom'],
     'quick-win':              ['ceva ușor de bifat'],
     'best-practices':         ['cum fac oamenii normali', 'așa se face, zice-se'],
-    'outside-box':            ['gândește, bă, altfel', 'visare cu ochii deschiși'],
+    'outside-box':            ['gândim altfel, bă'],
+    'blue-sky':               ['visare cu ochii deschiși'],
     'move-needle':            ['chiar schimbă ceva'],
     'game-changer':           ['chestie tare de tot', 'ne schimbă viața (nu)'],
-    'value-add':              ['ceva folositor', 'să iasă ceva bun'],
+    'value-add':              ['ceva folositor'],
+    'add-value':              ['e de folos'],
     'win-win':                ['ies toți bine', 'ne bucurăm toți'],
     'paradigm-shift':         ['altă mâncare de pește'],
     'holistic':               ['de la cap la coadă'],
     'granular':               ['pe firimituri', 'pe bucățele'],
     'actionable':             ['de care poți face ceva'],
-    'boil-ocean':             ['să fierbem marea, bă'],
+    'boil-ocean':             ['fierbem marea, bă'],
     'table-stakes':           ['minimul minimorum'],
     'north-star':             ['ținta cea mare'],
     'the-ask':                ['ce vreau io de fapt'],
     'learnings':              ['ce-am învățat, dacă am învățat'],
-    'next-level':             ['s-o facem și mai și'],
+    'next-level':             ['o facem și mai și'],
+    'next-level-adj':         ['cam mult'],
     'reinvent-wheel':         ['descoperim apa caldă'],
-    'food-for-thought':       ['gândește-te și tu'],
+    'food-for-thought':       ['ceva de rumegat'],
     'brain-dump':             ['zic tot ce-mi trece prin cap'],
     'high-level':             ['pe scurt', 'așa, în mare'],
     'in-the-weeds':           ['pierduți în detalii'],
-    'step-back':              ['hai s-o luăm de la capăt'],
+    'step-back':              ['o luăm de la capăt'],
     'end-of-day-phrase':      ['până la urmă'],
     'it-is-what-it-is':       ['asta e, ce să faci'],
-    'socialize':              ['dăm sfoară-n țară'],
-    'flagpole':               ['întreb șefu și-ți zic'],
+    'socialize':              ['dăm sfoară-n țară cu'],
+    'flagpole':               ['întrebăm șefu'],
 
     // ---- Politica de birou ---------------------------------------------
     'stakeholders':           ['ăia cu interese', 'ăia importanți'],
     'leadership':             ['ăia de sus', 'șefii mari'],
-    'escalate':               ['mă duc la șefu', 'fac scandal mai sus'],
+    'escalate':               ['mă duc la șefu'],
     'escalation':             ['plângere la șefi'],
-    'pushback':               ['gura lumii', 'sar oamenii'],
-    'ownership':              ['te ocupi tu', 'e treaba ta acum'],
-    'drive-forward':          ['împinge tu căruța'],
+    'pushback':               ['gura lumii'],
+    'push-back':              ['ne plângem'],
+    'ownership':              ['cartoful fierbinte'],
+    'take-ownership':         ['ne ocupăm noi'],
+    'drive-forward':          ['împingem căruța'],
     'bring-to-table':         ['aduce și el ceva'],
     'swim-lane':              ['cine ce face'],
     'with-respect':           ['cu tot respectul (adică zero)'],
@@ -146,7 +164,9 @@
     'restructuring':          ['tăiem în carne vie'],
     'layoffs':                ['dăm oameni afară'],
     'onboarding':             ['băgatul în pâine'],
+    'onboard':                ['băgăm în pâine pe'],
     'offboarding':            ['scosul din pâine'],
+    'offboard':               ['scoatem din pâine pe'],
     'headcount':              ['oameni', 'oameni și bani'],
 
     // ---- Munca propriu-zisa --------------------------------------------
@@ -154,7 +174,7 @@
     'no-bandwidth':           ['n-am nici chef, nici timp', 'sunt praf, bă'],
     'action-items':           ['ce-avem de făcut', 'cine ce face'],
     'deliverables':           ['ce trebuie livrat'],
-    'blocker':                ['chestia care ne ține-n loc'],
+    'blocker':                ['necaz', 'bucluc'],
     'blocked':                ['stau degeaba'],
     'backlog':                ['grămada de treburi'],
     'sprint':                 ['goana de două săptămâni'],
@@ -163,8 +183,8 @@
     'tech-debt':              ['mizeria de sub covor'],
     'nice-to-have':           ['dacă rămâne timp (nu rămâne)'],
     'must-have':              ['musai', 'bătut în cuie'],
-    'prioritize':             ['punem primul'],
-    'deprioritize':           ['băgăm la sertar'],
+    'prioritize':             ['ne concentrăm pe'],
+    'deprioritize':           ['lăsăm baltă'],
     'on-my-radar':            ['în vizor'],
     'single-source':          ['unde scrie adevărul'],
     'roadmap':                ['planul de pe hârtie'],
@@ -233,7 +253,7 @@
     'ro-problematica':        ['beleaua'],
     'ro-aspecte':             ['chestii'],
     'ro-sinergie':            ['magie corporatistă'],
-    'ro-resurse':             ['oameni și bani'],
+    'ro-resurse':             ['ăia de la personal'],
     'ro-necesita':            ['are nevoie de'],
     'ro-la-nivel-de':         ['pe partea de'],
     'ro-pe-zona-de':          ['pe partea de'],

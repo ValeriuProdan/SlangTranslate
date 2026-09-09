@@ -177,11 +177,30 @@ needs a noun (`ritmul întâlnirilor`), not a question (`cât de des`).
 
 Where one entry's patterns covered both a verb and a noun — `align` and
 `alignment`, `escalate` and `escalation` — they are now separate entries,
-because no single replacement can be correct for both.
+because no single replacement can be correct for both. Likewise a bare verb and
+a promise: `follow up` is a verb that keeps the sentence's own subject
+(*"please chase it up"*), while `(i|we) will follow up` is a whole clause and
+gets a whole clause back (*"I'll nag you later"*).
 
-The one thing this cannot fix is inflection: English has no agreement to match,
-but *"it moves the needle"* and *"it will move the needle"* want different
-Romanian verb forms and only get one. Bare infinitives are the best compromise.
+Optional `let's` and `I will` prefixes were removed from verb patterns for the
+same reason: a consumed prefix forced a clause-shaped replacement, which then
+broke every bare use. Now the sentence keeps its own subject and modal and the
+verb agrees with it (see the `*` marker above).
+
+Replacements that precede an object are worded to precede one: `prioritize` is
+*focus on* (so *"prioritize sleep"* → *"focus on sleep"*, not *"put first
+sleep"*), `please find attached` is *here's*.
+
+Romanian verbs conjugate far more than four ways, so the Romanian corporate
+verbs match one conjugation each — the first-person plural the replacement is
+written in (*"solicităm"* → *"cerem"*) — rather than guessing at the others.
+
+What the type rules **cannot** catch is a word that is corporate in one sense
+and ordinary in another: *"she sprints the last mile"*, *"the retro camera"*,
+*"natural resources"*. Those are handled by demanding the context that makes
+the corporate sense — a determiner before `sprint`, a preposition after
+`align`, an object after `leverage` — and a test runs everyday prose in both
+languages through the matcher and expects nothing to fire.
 
 **2. Then be funny.** Write what somebody would actually say out loud, not a
 polite gloss. "FYI" becomes `auzi ba` / `yo, listen up`, not "ca să știi și tu"
@@ -213,11 +232,35 @@ Romanian, and are deliberately absent from both lists.
 | `follow up` | a plain sequence of words |
 | `?just checking in` | `just` is optional |
 | `(lets\|let) sync` | alternatives for one slot |
-| `?(i\|we) ?(will\|ll) follow up` | both combined |
+| `*escalate` | the **inflecting** slot: the replacement takes this word's form |
+| `=moving forward` | this **exact** word — no typo tolerance, no stemming |
+| `*leverage >(our\|the)` | a **lookahead**: must be there, but stays in the text |
 
 Alternatives are one word each — write a second pattern for a multi-word
 variant. A pattern made only of optional slots is rejected at load time, as is
-one with a space inside the parentheses.
+one with a space inside the parentheses, more than one `*` slot, or a `>` slot
+that is not last.
+
+The three markers exist for one reason: **so the replacement fits the sentence
+it lands in.**
+
+- `*` reads the form of the matched word — `escalate`, `escalating`,
+  `escalated`, `escalates` — and the pack supplies a matching form:
+
+  ```js
+  'escalate': { base: ['tell the boss'], ing: ['telling the boss'],
+                ed: ['told the boss'],  s: ['tells the boss'] }
+  ```
+
+  so *"she is escalating this"* becomes *"she is telling the boss this"*. The
+  same `s` form gives countable nouns a plural: *"two blockers"* → *"two things
+  holding everything up"*. A plain list is every form at once.
+- `=` stops the stemmer from equating different words. Without it, the adverb
+  `moving forward` caught the verb *"we need to move forward"*, and the noun
+  in *"a lot of leverage"* caught the verb `leverages`.
+- `>` supplies context without eating it. `leverage` alone is a noun as often
+  as a verb; `leverage >our` is the verb, and *"our"* is still there afterwards:
+  *"use our network"*, not *"use network"*.
 
 ## Tests
 
@@ -268,6 +311,6 @@ test/dom.html            browser suite, run by test/run-dom.js
 
 - A per-site toggle, and a "translate this page" action for non-mail pages.
 - A keyboard shortcut for pause.
-- Verb inflection, so a replacement can agree with the sentence around it.
+- Romanian verb inflection beyond the one conjugation each entry matches now.
 - User-defined phrases stored in `chrome.storage.sync`.
 - More languages — the pack format is the whole story.
