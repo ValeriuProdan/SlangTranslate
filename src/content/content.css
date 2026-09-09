@@ -1,20 +1,41 @@
-/* The rewritten phrase. Marks are opt-in via the html.slang-marks class the
-   content script toggles, so the effect can be made invisible without
-   undoing the rewrite. */
+/* Every rewritten phrase is clickable: one click shows what was really
+   written, another puts the slang back. The cursor is the affordance, so it
+   applies whether or not the highlight is switched on. */
+.slang-swap {
+  cursor: pointer;
+}
+
+/* The highlight is opt-in via the html.slang-marks class the content script
+   toggles, so the effect can be made invisible without undoing the rewrite. */
 html.slang-marks .slang-swap {
   border-bottom: 1px dashed rgba(255, 122, 61, 0.7);
   background-image: linear-gradient(rgba(255, 122, 61, 0.16), rgba(255, 122, 61, 0.16));
   border-radius: 2px;
-  cursor: help;
 }
 
 html.slang-marks .slang-swap:hover {
   background-image: linear-gradient(rgba(255, 122, 61, 0.3), rgba(255, 122, 61, 0.3));
 }
 
+/* Flipped back to the corporate original: muted, so at a glance you can tell
+   which version you are looking at. */
+html.slang-marks .slang-swap.slang-original {
+  border-bottom-color: rgba(139, 149, 168, 0.8);
+  background-image: linear-gradient(rgba(139, 149, 168, 0.2), rgba(139, 149, 168, 0.2));
+}
+
+html.slang-marks .slang-swap.slang-original:hover {
+  background-image: linear-gradient(rgba(139, 149, 168, 0.34), rgba(139, 149, 168, 0.34));
+}
+
 @media (prefers-color-scheme: dark) {
   html.slang-marks .slang-swap {
     background-image: linear-gradient(rgba(255, 122, 61, 0.18), rgba(255, 122, 61, 0.18));
     border-bottom-color: rgba(255, 122, 61, 0.6);
+  }
+
+  html.slang-marks .slang-swap.slang-original {
+    background-image: linear-gradient(rgba(139, 149, 168, 0.24), rgba(139, 149, 168, 0.24));
+    border-bottom-color: rgba(139, 149, 168, 0.7);
   }
 }

@@ -92,7 +92,7 @@
     <h3>Compose (must stay untouched)</h3>
     <div contenteditable="true">FYI I will follow up — this box is contenteditable, so the extension
       must leave every word of it alone.</div>
-    <p class="note">Typos are handled too: try "as per my lst emial" or "no bandwith".</p>
+    <p class="note">Click any highlighted phrase to see the corporate original; click again to put the slang back. Typos are handled too: try "as per my lst emial" or "no bandwith".</p>
   </div>
 </div>
 
@@ -134,8 +134,7 @@
     rewriter = SlangDomRewrite.createRewriter({
       document: document,
       matcher: matcher,
-      strictness: strictness.value,
-      showOriginal: true
+      strictness: strictness.value
     });
     document.documentElement.classList.add('slang-marks');
     rewriter.rewrite(mail);

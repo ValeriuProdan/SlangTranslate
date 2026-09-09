@@ -1,0 +1,142 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Slang Translate - DOM tests</title>
+<!--
+  Run with: npm run test:dom
+
+  These exercise the parts that only exist in a browser: walking the page,
+  swapping text nodes, the click-to-reveal toggle and undo. Everything else is
+  covered by the plain-node suite in test/run.js.
+-->
+<div id="mail">
+  <p>FYI, as per my last email, I will follow up before EOD.</p>
+  <p>Please advise at your earliest convenience.</p>
+</div>
+<div id="compose" contenteditable="true">FYI I will follow up before EOD.</div>
+<textarea id="draft">Please advise at your earliest convenience.</textarea>
+<pre id="results"></pre>
+
+<script src="../src/lib/normalize.js"></script>
+<script src="../src/lib/fuzzy.js"></script>
+<script src="../src/lib/pattern.js"></script>
+<script src="../src/lib/matcher.js"></script>
+<script src="../src/lib/dom-rewrite.js"></script>
+<script src="../src/lib/pause.js"></script>
+<script src="../src/data/phrases.js"></script>
+<script src="../src/data/slang-ro.js"></script>
+<script src="../src/data/slang-en.js"></script>
+<script src="../src/data/packs.js"></script>
+<script>
+  const results = [];
+  function test(name, fn) {
+    try { fn(); results.push('PASS ' + name); }
+    catch (err) { results.push('FAIL ' + name + ' :: ' + err.message); }
+  }
+  function ok(value, note) { if (!value) throw new Error(note || 'expected truthy'); }
+  function eq(a, b, note) {
+    if (a !== b) throw new Error((note ? note + ': ' : '') + 'expected [' + b + '] got [' + a + ']');
+  }
+
+  const mail = document.getElementById('mail');
+  const compose = document.getElementById('compose');
+  const matcher = SlangMatcher.createMatcher(SlangPacks.build('en'));
+  const rewriter = SlangDomRewrite.createRewriter({ document: document, matcher: matcher });
+
+  const before = mail.textContent;
+  const composeBefore = compose.textContent;
+  const swapped = rewriter.rewrite(document.body);
+  const spans = () => document.querySelectorAll('span.slang-swap');
+  function click(el) { el.dispatchEvent(new MouseEvent('click', { bubbles: true })); }
+
+  test('the mail body gets rewritten', function () {
+    ok(swapped > 0, 'expected some swaps');
+    ok(mail.textContent !== before, 'the text should have changed');
+    ok(spans().length > 0, 'expected swap spans');
+  });
+
+  test('editable and input areas are left alone', function () {
+    eq(compose.textContent, composeBefore, 'contenteditable must not be touched');
+    eq(compose.querySelectorAll('span.slang-swap').length, 0, 'no spans in the compose box');
+    eq(document.getElementById('draft').value,
+       'Please advise at your earliest convenience.', 'textarea untouched');
+  });
+
+  test('each swap carries both texts', function () {
+    spans().forEach(function (span) {
+      ok(span.getAttribute('data-slang-original'), 'missing the original');
+      ok(span.getAttribute('data-slang-replacement'), 'missing the replacement');
+      ok(span.getAttribute('data-slang-entry'), 'missing the entry id');
+    });
+  });
+
+  test('the tooltip attribute is gone', function () {
+    spans().forEach(function (span) {
+      eq(span.hasAttribute('title'), false, 'title was replaced by the click toggle');
+    });
+  });
+
+  test('a click reveals the corporate original', function () {
+    const span = spans()[0];
+    const original = span.getAttribute('data-slang-original');
+    click(span);
+    eq(span.textContent, original, 'should now read as the original');
+    ok(span.classList.contains('slang-original'), 'and be marked as flipped');
+  });
+
+  test('clicking again puts the slang back', function () {
+    const span = spans()[0];
+    const replacement = span.getAttribute('data-slang-replacement');
+    click(span);
+    eq(span.textContent, replacement, 'should read as the slang again');
+    eq(span.classList.contains('slang-original'), false, 'and no longer be marked');
+  });
+
+  test('toggling one phrase leaves the others alone', function () {
+    const all = spans();
+    const other = all[1];
+    const otherText = other.textContent;
+    click(all[0]);
+    eq(other.textContent, otherText, 'the neighbour should not move');
+    click(all[0]);
+  });
+
+  test('a click that ends a selection does not toggle', function () {
+    const span = spans()[0];
+    const text = span.textContent;
+    const range = document.createRange();
+    range.selectNodeContents(span);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    click(span);
+    eq(span.textContent, text, 'selecting text must not flip the phrase');
+    selection.removeAllRanges();
+  });
+
+  test('a click somewhere else does nothing', function () {
+    const count = spans().length;
+    click(document.getElementById('draft'));
+    eq(spans().length, count, 'unrelated clicks are ignored');
+  });
+
+  test('undo restores the original text', function () {
+    const restored = rewriter.undoAll();
+    ok(restored > 0, 'expected spans to restore');
+    eq(mail.textContent, before, 'the page should read exactly as it started');
+    eq(spans().length, 0, 'no spans left behind');
+  });
+
+  test('undo works on a phrase currently flipped to the original', function () {
+    rewriter.rewrite(mail);
+    const all = spans();
+    // Flip a couple of them, so undo has to cope with a mixed page.
+    click(all[0]);
+    click(all[2]);
+    ok(all[0].classList.contains('slang-original'), 'first one is flipped');
+    SlangDomRewrite.undoAll(document);
+    eq(mail.textContent, before, 'a mixed page must still restore exactly');
+    eq(spans().length, 0, 'no spans left behind');
+  });
+
+  document.getElementById('results').textContent = results.join('\n');
+</script>

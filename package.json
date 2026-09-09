@@ -4,9 +4,10 @@
   "description": "Chrome extension that rewrites corporate speak in your inbox as slang (Romanian and English).",
   "private": true,
   "scripts": {
-    "test": "node test/run.js",
+    "test": "node test/run.js && node test/run-dom.js",
     "icons": "node tools/make-icons.js",
-    "zip": "rm -f slang-translate.zip && zip -r slang-translate.zip manifest.json src icons -x '*.DS_Store'"
+    "zip": "rm -f slang-translate.zip && zip -r slang-translate.zip manifest.json src icons -x '*.DS_Store'",
+    "test:dom": "node test/run-dom.js"
   },
   "license": "MIT"
 }

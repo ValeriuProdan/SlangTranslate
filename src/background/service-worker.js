@@ -3,7 +3,7 @@
  * corporate speak it has absorbed, or that it is currently snoozed -- and
  * seeds defaults on install.
  */
-const DEFAULTS = { enabled: true, language: 'ro', strictness: 'normal', showOriginal: true };
+const DEFAULTS = { enabled: true, language: 'ro', strictness: 'normal', highlight: true };
 
 const COLOR_ACTIVE = '#FF7A3D';
 const COLOR_PAUSED = '#6B7280';

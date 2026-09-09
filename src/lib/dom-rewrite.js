@@ -7,8 +7,8 @@
  *
  * Rules of the road:
  *  - never touch what the user is typing into (compose boxes, inputs)
- *  - every rewrite is wrapped in a span carrying the original text, so the
- *    change is reversible and hoverable
+ *  - every rewrite is wrapped in a span carrying both texts, so it can be
+ *    flipped back and forth on click and undone wholesale
  */
 (function (root) {
   'use strict';
@@ -16,6 +16,10 @@
   const N = root.SlangNormalize || (typeof require === 'function' ? require('./normalize.js') : null);
 
   const CLASS = 'slang-swap';
+  const ORIGINAL_CLASS = 'slang-original';
+
+  // One delegated listener per document, however many spans there are.
+  const listening = new WeakSet();
 
   const SKIP_TAGS = {
     SCRIPT: 1, STYLE: 1, NOSCRIPT: 1, TEXTAREA: 1, INPUT: 1, SELECT: 1,
@@ -33,9 +37,51 @@
   ].join(',');
 
   /**
+   * Flip one span between the rewritten phrase and what was really written.
+   * Both texts live on the element, so this needs no matcher and no memory
+   * of how the phrase was produced.
+   */
+  function toggleSwap(span) {
+    const original = span.getAttribute('data-slang-original');
+    const replacement = span.getAttribute('data-slang-replacement');
+    if (original === null || replacement === null) return false;
+    const showingOriginal = span.classList.contains(ORIGINAL_CLASS);
+    span.textContent = showingOriginal ? replacement : original;
+    span.classList.toggle(ORIGINAL_CLASS, !showingOriginal);
+    return true;
+  }
+
+  /**
+   * Click a rewritten phrase to see the corporate original, click again to
+   * put the slang back.
+   *
+   * Listens on the capture phase so a mail client that swallows clicks does
+   * not swallow this one, but deliberately does NOT preventDefault or stop
+   * propagation: the host app owns this click too -- opening a message from
+   * the list, following a link -- and breaking that would be far worse than
+   * a stray toggle.
+   */
+  function attachToggle(doc) {
+    if (listening.has(doc)) return;
+    listening.add(doc);
+    doc.addEventListener('click', function (event) {
+      const target = event.target;
+      if (!target || !target.closest) return;
+      const span = target.closest('span.' + CLASS);
+      if (!span) return;
+      // A click that finishes a drag-selection is not a click on the phrase.
+      const view = doc.defaultView;
+      const selection = view && view.getSelection && view.getSelection();
+      if (selection && !selection.isCollapsed) return;
+      toggleSwap(span);
+    }, true);
+  }
+
+  /**
    * Puts every swapped phrase back, anywhere in the document. Needs no
    * rewriter instance: the original text rides along on each span, so undo
-   * works even after the language (and matcher) has been thrown away.
+   * works even after the language (and matcher) has been thrown away, and
+   * whichever way a span is currently flipped.
    */
   function undoAll(doc, scope) {
     const spans = (scope || doc).querySelectorAll('span.' + CLASS);
@@ -52,14 +98,12 @@
     const doc = options.document;
     const matcher = options.matcher;
     const config = {
-      strictness: options.strictness || 'normal',
-      showOriginal: options.showOriginal !== false
+      strictness: options.strictness || 'normal'
     };
     const stats = { count: 0, byEntry: new Map() };
 
     function setOptions(next) {
       if (next.strictness) config.strictness = next.strictness;
-      if ('showOriginal' in next) config.showOriginal = !!next.showOriginal;
     }
 
     function isSkippable(el) {
@@ -125,8 +169,8 @@
       span.className = CLASS;
       span.textContent = match.replacement;
       span.setAttribute('data-slang-original', match.original);
+      span.setAttribute('data-slang-replacement', match.replacement);
       span.setAttribute('data-slang-entry', match.entry.id);
-      if (config.showOriginal) span.title = 'corporatese: ' + match.original;
       return span;
     }
 
@@ -169,6 +213,8 @@
         .slice(0, limit || 6);
     }
 
+    attachToggle(doc);
+
     return {
       rewrite: rewrite,
       undoAll: undoAllHere,
@@ -179,7 +225,14 @@
     };
   }
 
-  const api = { createRewriter: createRewriter, undoAll: undoAll, CLASS: CLASS };
+  const api = {
+    createRewriter: createRewriter,
+    undoAll: undoAll,
+    toggleSwap: toggleSwap,
+    attachToggle: attachToggle,
+    CLASS: CLASS,
+    ORIGINAL_CLASS: ORIGINAL_CLASS
+  };
 
   root.SlangDomRewrite = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

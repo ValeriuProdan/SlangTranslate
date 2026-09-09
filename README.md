@@ -29,7 +29,10 @@ the popup has the language picker, the on/off switch, the pause, the typo
 tolerance, and the list of what it caught. The popup speaks whichever language
 you are translating into.
 
-Hover any rewritten phrase to see the corporate original.
+**Click any rewritten phrase to see what was really written**, and click again
+to put the slang back. Flipped phrases go grey so you can tell at a glance which
+version you are reading. The highlight can be switched off in the popup; clicking
+still works.
 
 ## Pausing
 
@@ -80,9 +83,18 @@ matcher works on tokens rather than raw substrings.
    treated as a space, since HTML wraps text wherever it likes; only a blank
    line ends a sentence.
 
-Each phrase is replaced by a `<span class="slang-swap">` carrying the original
-in a `data-slang-original` attribute, so every rewrite is reversible — undo
-needs nothing but the DOM — and the compose box is never touched.
+Each phrase is replaced by a `<span class="slang-swap">` carrying *both* texts,
+in `data-slang-original` and `data-slang-replacement`. That is what makes the
+click toggle and the undo need nothing but the DOM — no matcher, no memory of
+how the phrase was produced, and it still works after the language has been
+switched out from under it. The compose box is never touched.
+
+The click listener is delegated (one per document, not one per span) and runs on
+the capture phase, so a mail client that swallows clicks does not swallow this
+one. It deliberately does **not** call `preventDefault` or stop propagation: the
+host app owns that click too — opening a message from the list, following a link
+— and breaking that would be worse than a stray toggle. A click that ends a
+drag-selection is ignored.
 
 ## Dictionary layout
 
@@ -144,7 +156,8 @@ one with a space inside the parentheses.
 ## Tests
 
 ```
-npm test
+npm test        # both suites
+npm run test:dom  # just the browser half
 ```
 
 No dependencies. Covers normalization, the typo budget, the pattern parser and
@@ -154,6 +167,14 @@ reachability check that every pattern actually fires on the plainest sentence
 it should match. The pause arithmetic is pure and tested directly, and the
 popup's label tables are checked against the markup so a missing translation
 fails the build instead of rendering as an empty row.
+
+The DOM half cannot run in plain node, and a headless-browser dependency would
+outweigh the extension itself — so `test/dom.html` runs in Chrome (which anyone
+building a Chrome extension already has) and `test/run-dom.js` reads the results
+back out of the page. It covers walking the page, skipping compose boxes and
+inputs, the click toggle, the selection guard, and undo on a page where some
+phrases are flipped and others are not. Set `CHROME_PATH` to pick a binary; the
+run is skipped, not failed, if no Chrome is found.
 
 ## Layout
 
@@ -170,6 +191,8 @@ src/content/content.js   settings, MutationObserver, messaging
 src/popup/              toolbar popup
 tools/make-icons.js      draws the icons, no dependencies
 demo/index.html          fake inbox for tuning
+test/run.js              node suite
+test/dom.html            browser suite, run by test/run-dom.js
 ```
 
 ## Roadmap

@@ -4,7 +4,7 @@ const DEFAULTS = {
   enabled: true,
   language: SlangPacks.DEFAULT_ID,
   strictness: 'normal',
-  showOriginal: true
+  highlight: true
 };
 
 /**
@@ -23,8 +23,8 @@ const STRINGS = {
     strict: 'strict',
     normal: 'normal',
     loose: 'lejer',
-    originalLabel: 'Arata originalul',
-    originalHint: 'subliniat, cu tooltip la hover',
+    highlightLabel: 'Evidentiaza traducerile',
+    highlightHint: 'oricum, click pe una arata originalul',
     pauseLabel: 'Pauza',
     pauseHint: 'oprire temporara, reporneste singura',
     pause15: '15 min',
@@ -53,8 +53,8 @@ const STRINGS = {
     strict: 'strict',
     normal: 'normal',
     loose: 'loose',
-    originalLabel: 'Show the original',
-    originalHint: 'underlined, with a tooltip on hover',
+    highlightLabel: 'Highlight the swaps',
+    highlightHint: 'either way, click one to see the original',
     pauseLabel: 'Pause',
     pauseHint: 'temporary, resumes on its own',
     pause15: '15 min',
@@ -78,7 +78,7 @@ const els = {
   enabled: document.getElementById('enabled'),
   language: document.getElementById('language'),
   strictness: document.getElementById('strictness'),
-  showOriginal: document.getElementById('showOriginal'),
+  highlight: document.getElementById('highlight'),
   count: document.getElementById('count'),
   top: document.getElementById('top'),
   empty: document.getElementById('empty'),
@@ -108,7 +108,7 @@ chrome.storage.sync.get(DEFAULTS, function (config) {
   els.enabled.checked = config.enabled;
   els.language.value = config.language;
   els.strictness.value = config.strictness;
-  els.showOriginal.checked = config.showOriginal;
+  els.highlight.checked = config.highlight;
   paint();
 });
 
@@ -178,8 +178,8 @@ els.language.addEventListener('change', function () {
 els.strictness.addEventListener('change', function () {
   chrome.storage.sync.set({ strictness: els.strictness.value });
 });
-els.showOriginal.addEventListener('change', function () {
-  chrome.storage.sync.set({ showOriginal: els.showOriginal.checked });
+els.highlight.addEventListener('change', function () {
+  chrome.storage.sync.set({ highlight: els.highlight.checked });
 });
 
 function strings() {

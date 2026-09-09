@@ -12,7 +12,7 @@
     enabled: true,
     language: window.SlangPacks.DEFAULT_ID,
     strictness: 'normal',
-    showOriginal: true
+    highlight: true
   };
 
   const LOCAL_DEFAULTS = { pausedUntil: 0 };
@@ -39,8 +39,7 @@
       rewriter = window.SlangDomRewrite.createRewriter({
         document: document,
         matcher: ensureMatcher(),
-        strictness: config.strictness,
-        showOriginal: config.showOriginal
+        strictness: config.strictness
       });
     }
     return rewriter;
@@ -147,7 +146,7 @@
   }
 
   function applyMarks() {
-    document.documentElement.classList.toggle('slang-marks', !!config.showOriginal);
+    document.documentElement.classList.toggle('slang-marks', !!config.highlight);
   }
 
   function start() {
