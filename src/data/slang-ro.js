@@ -7,17 +7,17 @@
  *    original stood, so it must be the same kind of phrase and fit what comes
  *    before and after it. "OOO" is a state ("I'll be OOO next week"), so it is
  *    "tolanit la soare", not the clause "sunt plecat". Verbs keep the sentence's
- *    own subject: "follow up" is "bip" so that "trebuie sa fac follow up" still
- *    reads.
+ *    own subject.
  * 2. Then be funny. Write what somebody would say out loud, not a polite gloss:
  *    "auzi ba", never "ca sa stii si tu".
  *
- * Values are plain lists here. English inflection ("escalating") does not
- * reach Romanian text, so the { base, ing, ed, s } form used by slang-en.js is
- * not needed.
+ * Values are plain lists here. English inflection ("escalating") does not reach
+ * Romanian text, so the { base, ing, ed, s } form used by slang-en.js is not
+ * needed.
  *
- * This pack also covers Romanian corporate speak, which the English pack has
- * no reason to.
+ * This pack also covers Romanian corporate speak -- both the romgleza of the
+ * open-plan office and the formulas that still open and close a Romanian
+ * business email -- which the English pack has no reason to.
  */
 (function (root) {
   'use strict';
@@ -33,6 +33,7 @@
     'will-follow-up':         ['te sun io, dacă-mi arde', 'îți dau bip, poate'],
     'circle-back':            ['revenim, adică nu'],
     'circle-back-promise':    ['ne auzim, adică nu', 'vorbim la Paștele cailor'],
+    'close-the-loop':         ['încheiem povestea'],
     'touch-base':             ['dăm un bip'],
     'per-my-last-email':      ['citește, bă, mailul', 'ți-am scris, deschide ochii'],
     'please-advise':          ['zi ceva, bă', 'ai amuțit?'],
@@ -75,6 +76,7 @@
     'no-worries':             ['lasă, frate', 'n-ai griji'],
     'sounds-good':            ['merge', 'e ok, bă'],
     'quick-question':         ['o întrebare scurtă (nu e scurtă)'],
+    'sanity-check':           ['o verificare, să nu fie tâmpenie'],
     'tldr':                   ['pe scurt, bă'],
 
     // ---- Sedinte si sincronizari ---------------------------------------
@@ -83,13 +85,17 @@
     'lets-sync':              ['hai să dăm o vorbă', 'hai la o cafea'],
     'lets-connect':           ['hai să dăm o vorbă', 'hai să ne auzim'],
     'hop-on-call':            ['dăm o vorbă'],
+    'quick-call':             ['un telefon care ține o oră'],
     'one-on-one':             ['o vorbă în doi'],
     'standup':                ['raportul de dimineață'],
     'retro':                  ['ședința de plâns'],
+    'debrief-noun':           ['povestire de după'],
+    'debrief':                ['povestim'],
     'all-hands':              ['adunarea'],
     'all-hands-deck':         ['toată lumea la treabă'],
     'take-offline':           ['vorbim între patru ochi'],
     'park-it':                ['băgăm la sertar', 'lăsăm pe altă dată'],
+    'table-this':             ['lăsăm baltă deocamdată'],
     'cadence':                ['ritmul întâlnirilor'],
     'touchpoint':             ['o vorbă, un bip'],
     'align':                  ['ne punem de acord'],
@@ -112,21 +118,32 @@
     'dive-deep':              ['băgăm nasu mai adânc'],
     'drill-down':             ['intrăm în amănunte'],
     'low-hanging':            ['ce se ia ușor', 'ce pică singur din pom'],
+    'pain-points':            ['ce doare'],
     'quick-win':              ['ceva ușor de bifat'],
     'best-practices':         ['cum fac oamenii normali', 'așa se face, zice-se'],
+    'best-in-class':          ['de neînvins, cică'],
+    'agile':                  ['flexibili, cică'],
+    'culture':                ['atmosfera, cică'],
     'outside-box':            ['gândim altfel, bă'],
     'blue-sky':               ['visare cu ochii deschiși'],
     'move-needle':            ['chiar schimbă ceva'],
+    'move-goalposts':         ['schimbăm regulile pe parcurs'],
     'game-changer':           ['chestie tare de tot', 'ne schimbă viața (nu)'],
     'value-add':              ['ceva folositor'],
+    'value-prop':             ['motivul, chipurile'],
     'add-value':              ['e de folos'],
     'win-win':                ['ies toți bine', 'ne bucurăm toți'],
     'paradigm-shift':         ['altă mâncare de pește'],
+    'new-normal':             ['așa e acum, ce să faci'],
+    'bau':                    ['ca de obicei, adică nimic nou'],
     'holistic':               ['de la cap la coadă'],
     'granular':               ['pe firimituri', 'pe bucățele'],
     'actionable':             ['de care poți face ceva'],
     'boil-ocean':             ['fierbem marea, bă'],
+    'herding-cats':           ['ca la balamuc'],
     'table-stakes':           ['minimul minimorum'],
+    'boots-on-ground':        ['oameni pe teren, de-adevăratelea'],
+    'give-110':               ['facem imposibilul'],
     'north-star':             ['ținta cea mare'],
     'the-ask':                ['ce vreau io de fapt'],
     'learnings':              ['ce-am învățat, dacă am învățat'],
@@ -136,6 +153,7 @@
     'food-for-thought':       ['ceva de rumegat'],
     'brain-dump':             ['zic tot ce-mi trece prin cap'],
     'high-level':             ['pe scurt', 'așa, în mare'],
+    'at-scale':               ['când o fi mare'],
     'in-the-weeds':           ['pierduți în detalii'],
     'step-back':              ['o luăm de la capăt'],
     'end-of-day-phrase':      ['până la urmă'],
@@ -155,6 +173,7 @@
     'drive-forward':          ['împingem căruța'],
     'bring-to-table':         ['aduce și el ceva'],
     'swim-lane':              ['cine ce face'],
+    'cross-functional':       ['de-a valma'],
     'with-respect':           ['cu tot respectul (adică zero)'],
     'correct-me':             ['greșești, dar zic frumos'],
     'missing-something':      ['tu ești ăla care greșește'],
@@ -184,14 +203,19 @@
     'nice-to-have':           ['dacă rămâne timp (nu rămâne)'],
     'must-have':              ['musai', 'bătut în cuie'],
     'prioritize':             ['ne concentrăm pe'],
+    'priorities':             ['ce contează, chipurile'],
     'deprioritize':           ['lăsăm baltă'],
     'on-my-radar':            ['în vizor'],
     'single-source':          ['unde scrie adevărul'],
+    'kpi':                    ['cifrele după care ești judecat'],
+    'okr':                    ['țintele pe care nu le atinge nimeni'],
     'roadmap':                ['planul de pe hârtie'],
+    'runway':                 ['banul rămas'],
     'eta':                    ['termenul, chipurile'],
+    'tbd':                    ['nu știe nimeni încă'],
     'ballpark':               ['o cifră din burtă'],
     'mission-critical':       ['moare lumea fără asta'],
-    'top-priority':           ['cel mai urgent (ca toate)'],
+    'top-priority':           ['cea mai urgentă chestie (ca toate)'],
     'urgent':                 ['urgent (ca de obicei)'],
     'fire-drill':             ['panică generală'],
 
@@ -205,7 +229,6 @@
     'ro-multumesc-anticipat': ['mersi, că n-ai scăpare'],
     'ro-astept-interes':      ['aștept, fără speranțe'],
     'ro-confirmati':          ['zi și tu că ai primit'],
-    'ro-informam':            ['îți zicem că'],
     'ro-scuze-intarziere':    ['am uitat de tine, scuze'],
     'ro-va-rog-frumos':       ['te rog frumos'],
     'ro-tin-la-curent':       ['îți zic ce mai e'],
@@ -217,31 +240,21 @@
     'ro-cu-referire':         ['despre', 'legat de'],
     'ro-mentionez':           ['zic doar că'],
     'ro-punct-de-vedere':     ['după mine'],
-    'ro-in-atentia':          ['pentru'],
 
     // ---- Timp si urgenta -----------------------------------------------
     'ro-scurt-timp':          ['cât de repede poți', 'pe repede înainte'],
-    'ro-cu-celeritate':       ['repede, bă'],
-    'ro-moment-oportun':      ['când o fi'],
     'ro-termen-limita':       ['termenul, adică ieri'],
     'ro-finalul-zilei':       ['până la urmă'],
 
     // ---- Verbe de sedinta ----------------------------------------------
-    'ro-demara':              ['începem'],
     'ro-solicita':            ['cerem'],
-    'ro-efectua':             ['facem'],
-    'ro-identifica':          ['găsim'],
     'ro-implementa':          ['băgăm'],
     'ro-valida':              ['zicem da'],
     'ro-agrea':               ['ne-am înțeles'],
     'ro-alinia':              ['ne punem de acord'],
     'ro-prioritiza':          ['punem primul'],
     'ro-optimiza':            ['facem mai bine'],
-    'ro-eficientiza':         ['facem mai repede'],
-    'ro-capitaliza':          ['profităm de'],
     'ro-targeta':             ['țintim'],
-    'ro-demersuri':           ['mișcăm ceva'],
-    'ro-bun-sfarsit':         ['terminăm'],
     'ro-avea-in-vedere':      ['ține minte că', 'ai grijă că'],
     'ro-lua-in-considerare':  ['ne gândim la'],
 
@@ -250,14 +263,37 @@
     'ro-sedinta-lucru':       ['o vorbă lungă'],
     'ro-provocare':           ['belea', 'bătaie de cap'],
     'ro-oportunitate':        ['șansă', 'ocazie'],
-    'ro-problematica':        ['beleaua'],
     'ro-aspecte':             ['chestii'],
     'ro-sinergie':            ['magie corporatistă'],
     'ro-resurse':             ['ăia de la personal'],
-    'ro-necesita':            ['are nevoie de'],
     'ro-la-nivel-de':         ['pe partea de'],
     'ro-pe-zona-de':          ['pe partea de'],
-    'ro-in-masura':           ['dacă'],
+    'ro-face-sens':           ['stă în picioare', 'are logică'],
+    'ro-taskuri':             ['treburi'],
+    'ro-taskurile':           ['treburile'],
+    'ro-deadline':            ['data la care sare capul'],
+    'ro-call':                ['un telefon'],
+    'ro-callul':              ['telefonul'],
+    'ro-meeting':             ['o ședință'],
+    'ro-meetingul':           ['ședința'],
+    'ro-target':              ['ținta'],
+    'ro-pipeline':            ['lista de clienți'],
+    'ro-feedback':            ['o părere'],
+    'ro-time-consuming':      ['de durată, adică toată ziua'],
+    'ro-per-total':           ['una peste alta'],
+    'ro-guru':                ['se crede deștept'],
+    'ro-customiza':           ['meșterim'],
+    'ro-sharui':              ['dăm mai departe'],
+    'ro-focusa':              ['ne uităm la'],
+    'ro-adresa':              ['rezolvăm'],
+    'ro-forcasta':            ['ghicim cifrele'],
+    'ro-updata':              ['aducem la zi'],
+    'ro-aplica':              ['candidez la'],
+    'ro-escalada':            ['ne plângem'],
+    'ro-livra':               ['dăm gata'],
+    'ro-monitoriza':          ['ținem ochii pe'],
+
+    // ---- Romgleza de birou ---------------------------------------------
     }
   };
 

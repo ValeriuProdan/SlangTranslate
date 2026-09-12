@@ -741,14 +741,114 @@ test('everyday prose is left alone', function () {
     'The capacity of the hall is about three hundred people.',
     'I read your draft and had a few thoughts about the ending.',
     'He bumped into her at the shop.',
-    'Sync your phone before you leave.'
+    'Sync your phone before you leave.',
+    // Words the researched additions put at risk.
+    'We went to a pop culture convention and the culture of the town is lovely.',
+    'She is an agile gymnast and moves faster than anyone I know.',
+    'The table was set for eight and I tabled the plates myself.',
+    'He gave 110 dollars to the fundraiser and another 50 later.',
+    'There was a debriefing room at the back of the museum.',
+    'I leaned in to hear her better.',
+    'The runway at the small airport is being resurfaced this month.',
+    'Our cat keeps herding the chickens into the shed.',
+    'I peeled the onion for the soup and cried the whole time.',
+    'My priorities have changed since the baby arrived.',
+    'The scale of the mountain is hard to judge from here.',
+    'He works at a call centre and answers the phone all day.'
   ].forEach(function (text) { eq(en.translate(text), text); });
   const ro = M.createMatcher(PACKS.build('ro'));
   [
     'Aparatul foto retro face poze superbe.',
     'Am aliniat rafturile din garaj.',
-    'Resursele naturale din zona sunt lemn.'
+    'Resursele naturale din zona sunt lemn.',
+    'Ne uitam la un film si mancam popcorn.',
+    'Copilul a facut o casuta din lego.'
   ].forEach(function (text) { eq(ro.translate(text), text); });
+});
+
+// ---------------------------------------------------------------- research
+
+test('a noun no longer matches the verb entry it resembles', function () {
+  // "priorities" was stem-matching the verb "prioritize", giving
+  // "strategic focuses on". The verb slot is exact now.
+  eq(en.translate('strategic priorities'), 'things that matter, apparently');
+  eq(en.translate('we must prioritize this'), 'we must focus on this');
+});
+
+test('a replacement does not bring a second determiner', function () {
+  // "our top priorities" was becoming "our the most urgent (...)".
+  eq(en.translate('our top priorities'), 'our most urgent things (like everything else)');
+  eq(en.translate('our top priority'), 'our most urgent thing (like everything else)');
+  eq(en.translate('our company culture is strong'), 'the vibe, allegedly is strong');
+  eq(en.translate('a quick debrief'), 'a recap');
+});
+
+test('the researched English additions all fire', function () {
+  const cases = {
+    'the new normal': 'new-normal',
+    'boots on the ground': 'boots-on-ground',
+    'give 110 percent': 'give-110',
+    'let us table this': 'table-this',
+    'close the loop on this': 'close-the-loop',
+    'a sanity check': 'sanity-check',
+    'business as usual': 'bau',
+    'the KPIs are down': 'kpi',
+    'our OKRs': 'okr',
+    'the pain points': 'pain-points',
+    'our value proposition': 'value-prop',
+    'best in class': 'best-in-class',
+    'at scale': 'at-scale',
+    'a cross functional team': 'cross-functional',
+    'our runway is short': 'runway',
+    'like herding cats': 'herding-cats',
+    'they moved the goalposts': 'move-goalposts',
+    'TBD': 'tbd',
+    'be agile': 'agile',
+    'our company culture is strong': 'culture'
+  };
+  Object.keys(cases).forEach(function (text) {
+    const ids = en.findMatches(text).map(function (m) { return m.entry.id; });
+    ok(ids.indexOf(cases[text]) !== -1, JSON.stringify(text) + ' should fire ' + cases[text] + ', got [' + ids.join(', ') + ']');
+  });
+});
+
+test('romgleza is caught, not just formal Romanian', function () {
+  const ro = M.createMatcher(PACKS.build('ro'));
+  const cases = {
+    'Crezi ca face sens?': 'ro-face-sens',
+    'Am niste task-uri de facut': 'ro-taskuri',
+    'deadline-ul e vineri': 'ro-deadline',
+    'Hai sa dam un call': 'ro-call',
+    'Avem un meeting la 3': 'ro-meeting',
+    'Customizam produsul': 'ro-customiza',
+    'Sharuim cu echipa': 'ro-sharui',
+    'Ne focusam pe asta': 'ro-focusa',
+    'Adresam problema': 'ro-adresa',
+    'Updatam documentul': 'ro-updata',
+    'Aplic pentru pozitia asta': 'ro-aplica',
+    'Per total a mers bine': 'ro-per-total',
+    'Task-urile sunt time consuming': 'ro-time-consuming'
+  };
+  Object.keys(cases).forEach(function (text) {
+    const ids = ro.findMatches(text).map(function (m) { return m.entry.id; });
+    ok(ids.indexOf(cases[text]) !== -1, JSON.stringify(text) + ' should fire ' + cases[text] + ', got [' + ids.join(', ') + ']');
+  });
+});
+
+test('the institutional register was dropped', function () {
+  const ro = M.createMatcher(PACKS.build('ro'));
+  [
+    'Vă informăm că demarăm procedura.',
+    'Cu celeritate, la momentul oportun.',
+    'Facem demersuri pentru a duce la bun sfarsit.'
+  ].forEach(function (text) { eq(ro.translate(text), text); });
+});
+
+test('but the email formulas were kept', function () {
+  const ro = M.createMatcher(PACKS.build('ro'));
+  ['Cu stima', 'Raman la dispozitia dumneavoastra', 'Va multumesc anticipat'].forEach(function (text) {
+    ok(ro.translate(text) !== text, JSON.stringify(text) + ' should still be rewritten');
+  });
 });
 
 // ---------------------------------------------------------------- report

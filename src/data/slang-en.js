@@ -5,15 +5,14 @@
  *
  * 1. Keep the grammar. A replacement is dropped into the sentence where the
  *    original stood, so it must fit what comes before and after it. Verbs are
- *    given as { base, ing, ed, s } and the matcher picks the form of the word
- *    it actually found: "escalating" becomes "telling the boss", "escalates"
- *    becomes "tells the boss". Nouns stay nouns, states stay states -- "OOO"
- *    is "off sunning myself", never a clause.
+ *    given as { base, ing, ed, s } and the matcher picks the form of the word it
+ *    actually found: "escalating" becomes "telling the boss". The same s form
+ *    gives countable nouns their plural. Nouns stay nouns, states stay states.
  * 2. Then be funny. Write what somebody would say out loud, not a glossary
  *    entry: "yo, listen up", never "for your information".
  *
- * Romanian corporate speak is deliberately not covered here -- nobody writes
- * it in an English thread, and an uncovered phrase is simply left alone.
+ * Romanian corporate speak is deliberately not covered here -- nobody writes it
+ * in an English thread, and an uncovered phrase is simply left alone.
  */
 (function (root) {
   'use strict';
@@ -42,6 +41,12 @@
       'we\'ll never speak of this again',
       'let\'s pretend we\'ll talk later'
     ],
+    'close-the-loop': {
+      base: ['finish the thread'],
+      ing: ['finishing the thread'],
+      ed: ['finished the thread'],
+      s: ['finishes the thread']
+    },
     'touch-base': {
       base: ['have a quick word'],
       ing: ['having a quick word'],
@@ -99,6 +104,7 @@
     'no-worries':             ['all good', 'no stress'],
     'sounds-good':            ['fine by me', 'that\'ll do'],
     'quick-question':         ['a quick question (it isn\'t)'],
+    'sanity-check':           ['a quick look to see if this is mad'],
     'tldr':                   ['short version'],
 
     // ---- Meetings and syncs --------------------------------------------
@@ -117,9 +123,16 @@
       ed: ['had a word'],
       s: ['has a word']
     },
+    'quick-call':             ['a call that eats an hour'],
     'one-on-one':             ['a word in private'],
     'standup':                ['morning roll call'],
     'retro':                  ['group therapy'],
+    'debrief-noun':           ['recap'],
+    'debrief': {
+      base: ['go over it'],
+      ed: ['went over it'],
+      s: ['goes over it']
+    },
     'all-hands':              ['the whole-company assembly'],
     'all-hands-deck':         ['everyone in, now'],
     'take-offline': {
@@ -133,6 +146,12 @@
       ing: ['shelving it', 'kicking it down the road'],
       ed: ['shelved it', 'kicked it down the road'],
       s: ['shelves it', 'kicks it down the road']
+    },
+    'table-this': {
+      base: ['drop it for now'],
+      ing: ['dropping it for now'],
+      ed: ['dropped it for now'],
+      s: ['drops it for now']
     },
     'cadence':                ['the meeting rhythm'],
     'touchpoint':             ['a word, a nudge'],
@@ -206,11 +225,18 @@
       s: ['gets right into it']
     },
     'low-hanging':            ['the easy stuff', 'whatever falls off the tree'],
+    'pain-points': {
+      base: ['thing that hurts'],
+      s: ['things that hurt']
+    },
     'quick-win': {
       base: ['easy tick'],
       s: ['easy ticks']
     },
     'best-practices':         ['how normal people do it', 'the done thing, apparently'],
+    'best-in-class':          ['unbeatable, apparently'],
+    'agile':                  ['bendy, allegedly'],
+    'culture':                ['the vibe, allegedly'],
     'outside-box': {
       base: ['have an actual idea'],
       ing: ['having an actual idea'],
@@ -224,8 +250,15 @@
       ed: ['actually changed something'],
       s: ['actually changes something']
     },
+    'move-goalposts': {
+      base: ['change the rules halfway'],
+      ing: ['changing the rules halfway'],
+      ed: ['changed the rules halfway'],
+      s: ['changes the rules halfway']
+    },
     'game-changer':           ['a proper big deal', 'life-changing (it isn\'t)'],
     'value-add':              ['something useful'],
+    'value-prop':             ['reason to care, allegedly'],
     'add-value': {
       base: ['be useful'],
       ing: ['being useful'],
@@ -234,6 +267,8 @@
     },
     'win-win':                ['everyone wins', 'we all go home happy'],
     'paradigm-shift':         ['a whole different beast'],
+    'new-normal':             ['how it is now, apparently'],
+    'bau':                    ['the usual grind'],
     'holistic':               ['top to bottom'],
     'granular':               ['crumb by crumb', 'in tiny pieces'],
     'actionable':             ['something you can act on'],
@@ -243,7 +278,15 @@
       ed: ['boiled the sea, mate'],
       s: ['boils the sea, mate']
     },
+    'herding-cats':           ['a shambles'],
     'table-stakes':           ['the bare minimum'],
+    'boots-on-ground':        ['actual people doing actual work'],
+    'give-110': {
+      base: ['do the impossible'],
+      ing: ['doing the impossible'],
+      ed: ['did the impossible'],
+      s: ['does the impossible']
+    },
     'north-star':             ['the big target'],
     'the-ask':                ['what I actually want'],
     'learnings':              ['what we learned, if anything'],
@@ -263,6 +306,7 @@
     'food-for-thought':       ['something to chew on'],
     'brain-dump':             ['everything on my mind, unfiltered'],
     'high-level':             ['the short version', 'roughly speaking'],
+    'at-scale':               ['when it is huge'],
     'in-the-weeds':           ['lost in the details'],
     'step-back': {
       base: ['start over'],
@@ -325,6 +369,7 @@
       s: ['actually offers']
     },
     'swim-lane':              ['who does what'],
+    'cross-functional':       ['mixed-up'],
     'with-respect':           ['with all due respect (there is none)'],
     'correct-me':             ['you\'re wrong, but politely'],
     'missing-something':      ['you\'re the one who\'s wrong'],
@@ -378,6 +423,7 @@
       ed: ['focused on'],
       s: ['focuses on']
     },
+    'priorities':             ['things that matter, apparently'],
     'deprioritize': {
       base: ['quietly drop'],
       ing: ['quietly dropping'],
@@ -386,11 +432,24 @@
     },
     'on-my-radar':            ['on my list'],
     'single-source':          ['the one place that\'s right'],
+    'kpi': {
+      base: ['number they judge you by'],
+      s: ['numbers they judge you by']
+    },
+    'okr': {
+      base: ['goal nobody hits'],
+      s: ['goals nobody hits']
+    },
     'roadmap':                ['the plan on paper'],
+    'runway':                 ['cash left'],
     'eta':                    ['the supposed finish time'],
+    'tbd':                    ['nobody knows yet'],
     'ballpark':               ['a number off the top of my head'],
     'mission-critical':       ['the world ends without it'],
-    'top-priority':           ['the most urgent (like everything else)'],
+    'top-priority': {
+      base: ['most urgent thing (like everything else)'],
+      s: ['most urgent things (like everything else)']
+    },
     'urgent':                 ['urgent (as always)'],
     'fire-drill':             ['everyone panic'],
 

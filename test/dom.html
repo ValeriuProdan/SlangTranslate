@@ -21,6 +21,7 @@
   <p id="p-ro">Salut, hai sa dam un sync maine ca avem deadline la task-urile astea. FYI, am intarziat.</p>
   <p id="p-corp">Ramanem la dispozitia dumneavoastra pentru orice detalii. Cu stima.</p>
   <p id="p-twice">Let us park this for now. Later we can park this again.</p>
+  <p id="p-romgleza">Crezi ca face sens sa dam un call? Am niste task-uri si deadline-ul e vineri.</p>
 </div>
 <pre id="results"></pre>
 
@@ -206,6 +207,17 @@
     const texts = swapsIn('p-twice').map(function (span) { return span.textContent; });
     eq(texts.length, 2, 'both occurrences should be rewritten');
     ok(texts[0] !== texts[1], 'variants should rotate, not repeat: ' + texts.join(' / '));
+  });
+
+  test('office romgleza is caught and rewritten in Romanian', function () {
+    // English nouns bolted onto Romanian grammar. The phrases are Romanian-
+    // source, so they also vote for Romanian in the detector.
+    const spans = swapsIn('p-romgleza');
+    ok(spans.length >= 3, 'expected several swaps, got ' + spans.length);
+    langsIn('p-romgleza').forEach(function (lang) { eq(lang, 'ro'); });
+    const text = document.getElementById('p-romgleza').textContent;
+    eq(text.indexOf('face sens'), -1, 'the calque should be gone: ' + text);
+    eq(text.indexOf('task-uri'), -1, 'task-uri should be gone: ' + text);
   });
 
   test('the stats know which language went where', function () {

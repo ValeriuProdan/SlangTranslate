@@ -140,10 +140,29 @@ src/data/packs.js       combines them for the matcher
 
 Phrases are split by **source language**, which is not the same as the language
 they get rewritten into. English corporate speak turns up in everybody's inbox,
-so every pack needs an answer for it. Romanian corporate speak — "conform celor
-discutate", "cu stimă", "rămân la dispoziție" — only the Romanian pack does. A
-pack with no words for a phrase leaves it alone rather than borrowing another
-language's joke, and a test enforces exactly that.
+so every pack needs an answer for it. Romanian corporate speak only the Romanian
+pack does. A pack with no words for a phrase leaves it alone rather than
+borrowing another language's joke, and a test enforces exactly that.
+
+The Romanian list covers **two registers**, and the second one matters more:
+
+- the formulas that still open and close a business email — `cu stimă`,
+  `rămân la dispoziția dumneavoastră`, `vă mulțumesc anticipat`;
+- **romgleza**, the open-plan office dialect — `face sens` (the calque of "it
+  makes sense"; correct Romanian is *are sens*), `task-uri`, `deadline-ul`,
+  `un call`, `customizăm`, `sharuim`, `ne focusăm`, `adresăm`, `forcastăm`.
+
+Institutional legalese — `cu celeritate`, `facem demersuri`, `în măsura în care`
+— was deliberately dropped: it belongs to letters to the town hall, not to email.
+
+### Where the phrase lists come from
+
+The English list is checked against published surveys of workplace jargon
+(Preply, WEF, NPR — linked from the plan that produced them) rather than from
+memory, which is how gaps like `culture` (the #2 most-recognised phrase) and
+`new normal` (the most disliked) were found. The Romanian list has no equivalent
+survey behind it, so it is assembled from Romanian writing about *romgleza*
+and *corporateză*.
 
 ### Adding a phrase
 
@@ -197,10 +216,19 @@ written in (*"solicităm"* → *"cerem"*) — rather than guessing at the others
 
 What the type rules **cannot** catch is a word that is corporate in one sense
 and ordinary in another: *"she sprints the last mile"*, *"the retro camera"*,
-*"natural resources"*. Those are handled by demanding the context that makes
-the corporate sense — a determiner before `sprint`, a preposition after
-`align`, an object after `leverage` — and a test runs everyday prose in both
-languages through the matcher and expects nothing to fire.
+*"natural resources"*, *"a pop culture convention"*, *"an agile gymnast"*. Those
+are handled by demanding the context that makes the corporate sense — a
+determiner before `sprint`, a preposition after `align`, an object after
+`leverage` — and a test runs everyday prose in both languages through the
+matcher and expects nothing to fire. **Every new phrase goes through that sweep
+before it is added**; it is what caught `culture of the town`, `gave 110
+dollars` and `a debriefing room`.
+
+Two candidates were dropped rather than gated, because their ordinary sense is
+too plausible in an email to separate out: `lean in` (*"she leaned in and
+whispered"*) and `peel the onion`. `give 110%` survives only as the spelled-out
+"110 percent", because `%` is not a token and *"gave 110 dollars"* is otherwise
+indistinguishable.
 
 **2. Then be funny.** Write what somebody would actually say out loud, not a
 polite gloss. "FYI" becomes `auzi ba` / `yo, listen up`, not "ca să știi și tu"
