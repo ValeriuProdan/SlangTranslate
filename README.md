@@ -235,6 +235,20 @@ polite gloss. "FYI" becomes `auzi ba` / `yo, listen up`, not "ca să știi și t
 / "for your information". A replacement that reads like a dictionary entry is
 wrong even when it is correct.
 
+Each pack has a **voice**, and it is the whole joke:
+
+| | |
+| --- | --- |
+| `slang-en.js` | blunt, casual, British-leaning — *"yo, listen up"*, *"you alive?"*, *"later"* |
+| `slang-ro.js` | **manele** — vocatives and the swagger that comes with them: *"respect, bossule"*, *"pe aceeași manea"*, *"altă manea"*, *"se crede barosan"*, *"lovelele rămase"* |
+
+The manele voice has one rule of its own, and it is a grammar rule rather than
+a taste one: **a vocative only ever attaches to a clause, an imperative or a
+sign-off.** Never to a noun phrase that has to sit mid-sentence, where
+*"avem un bucluc, frate mare"* would be nonsense. And vocatives are thinned
+where entries cluster — a signature block was coming out *"frate … frate …
+bossule"* until `vă țin la curent` and `revin cu un feedback` gave theirs up.
+
 ### Adding a language
 
 Copy a pack, translate the values, and register it:
